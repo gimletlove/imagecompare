@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Image Compare
+Comment=Compare images
+Exec=imagecompare %F
+Icon=io.github.gimletlove.imagecompare
+Type=Application
+Terminal=false
+Categories=Graphics;Viewer;
+MimeType=image/png;image/jpeg;image/webp;image/avif;image/jxl;image/heic;image/heif;image/tiff;image/bmp;

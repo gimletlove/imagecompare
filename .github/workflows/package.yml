@@ -1,0 +1,54 @@
+name: Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version used for the packaged zip name
+        required: true
+        type: string
+
+jobs:
+  package-linux:
+    name: Linux Artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Compute artifact label
+        id: meta
+        shell: bash
+        run: |
+          version='${{ inputs.version }}'
+          artifact_name="imagecompare-linux-${version}"
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            ninja-build \
+            pkg-config \
+            qt6-base-dev \
+            qt6-base-dev-tools \
+            qt6-declarative-dev \
+            libvips-dev
+
+      - name: Configure Release build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Stage install tree
+        run: cmake --install build --prefix "$PWD/stage/linux"
+
+      - name: Upload Linux bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.meta.outputs.artifact_name }}
+          path: stage/linux
+          if-no-files-found: error

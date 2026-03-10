@@ -1,0 +1,6 @@
+.worktrees/
+build/
+dist/
+stage/
+test-images/
+docs/

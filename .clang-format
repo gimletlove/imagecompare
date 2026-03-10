@@ -1,0 +1,11 @@
+BasedOnStyle: Google
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+BreakBeforeBraces: Attach
+NamespaceIndentation: All
+ColumnLimit: 140
+AllowAllParametersOfDeclarationOnNextLine: false
+BreakFunctionDefinitionParameters: false
+PenaltyBreakBeforeFirstCallParameter: 1000000
+PenaltyReturnTypeOnItsOwnLine: 1000000

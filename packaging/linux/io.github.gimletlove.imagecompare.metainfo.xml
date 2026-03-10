@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.gimletlove.imagecompare</id>
+  <launchable type="desktop-id">io.github.gimletlove.imagecompare.desktop</launchable>
+  <name>Image Compare</name>
+  <summary>Compare images</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <developer id="io.github.gimletlove">
+    <name>gimletlove</name>
+  </developer>
+  <description>
+    <p>Image Compare lets you inspect two images side by side or in a stacked view, making it easier to spot subtle visual changes and evaluate differences.</p>
+    <ul>
+      <li>Side-by-side and stacked comparison</li>
+      <li>Zoom and pan tools</li>
+      <li>Create a heatmap of differences between two images</li>
+      <li>Support for multiple image formats</li>
+    </ul>
+  </description>
+  <screenshots>
+  <screenshot type="default">
+    <caption>Comparing two images side by side with a heatmap</caption>
+    <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/image-compare-screenshot.png</image>
+  </screenshot>
+</screenshots>
+  <url type="homepage">https://github.com/gimletlove/imagecompare</url>
+  <url type="bugtracker">https://github.com/gimletlove/imagecompare/issues</url>
+  <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="1.0.2" date="2026-03-10"/>
+  </releases>
+</component>
