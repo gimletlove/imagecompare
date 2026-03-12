@@ -8,7 +8,9 @@ Linux Image Comparison Program with various helpful features and tools.
 
 ## Install
 
-TODO
+<a href='https://flathub.org/apps/details/io.github.gimletlove.imagecompare'><img alt='Download on Flathub' src='https://flathub.org/api/badge?svg&locale=en'/></a>
+
+[Arch (AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
 
 ## Runtime Requirements
 
