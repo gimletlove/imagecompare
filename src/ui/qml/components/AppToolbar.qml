@@ -26,7 +26,7 @@ Item {
         spacing: 4
 
         ToolButton {
-            text: "Open"
+            text: "Open (o)"
             property string tool_tip_text: "Import images into the workspace"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
@@ -39,7 +39,7 @@ Item {
         }
 
         ToolButton {
-            text: "Build Heatmap"
+            text: "Build Heatmap (b)"
             enabled: root.workspace ? (root.workspace.can_build_heatmap && root.workspace.entry_count === 2) : false
             property string tool_tip_text: "Build a heatmap of the level of difference from two images"
             ToolTip.visible: hovered
@@ -49,7 +49,7 @@ Item {
         }
 
         ToolButton {
-            text: root.display_mode_toggle_text
+            text: root.display_mode_toggle_text + " (r)"
             enabled: root.can_display_mode_action
             property string tool_tip_text: "Faithful uses color profile metadata; Raw ignores color profile metadata"
             ToolTip.visible: hovered
@@ -59,7 +59,7 @@ Item {
         }
 
         ToolButton {
-            text: root.zoom_readout
+            text: root.zoom_readout + " (t)"
             enabled: root.can_best_fit_action
             property string tool_tip_text: "Reset zoom to 100 percent"
             ToolTip.visible: hovered

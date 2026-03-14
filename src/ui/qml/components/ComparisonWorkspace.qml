@@ -138,6 +138,39 @@ Item {
     }
 
     Shortcut {
+        sequence: "O"
+        context: Qt.ApplicationShortcut
+        onActivated: root.open_requested()
+    }
+
+    Shortcut {
+        sequence: "B"
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            if (root.controller && root.controller.workspace && root.controller.workspace.can_build_heatmap) {
+                root.controller.build_heatmap()
+            }
+        }
+    }
+
+    Shortcut {
+        sequence: "R"
+        context: Qt.ApplicationShortcut
+        onActivated: root.toggle_display_mode()
+    }
+
+    Shortcut {
+        sequence: "T"
+        context: Qt.ApplicationShortcut
+        onActivated: {
+            if (!panes_grid.can_best_fit_action) {
+                return;
+            }
+            panes_grid.set_zoom100();
+        }
+    }
+
+    Shortcut {
         sequence: "F"
         context: Qt.ApplicationShortcut
         onActivated: root.apply_best_fit()
