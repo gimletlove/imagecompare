@@ -10,9 +10,10 @@
     <name>gimletlove</name>
   </developer>
   <description>
-    <p>Image Compare lets you inspect two images side by side or in a stacked view, making it easier to spot subtle visual changes and evaluate differences.</p>
+    <p>Image Compare lets you inspect two or more images side by side or in a stacked view, making it easier to spot subtle visual changes and evaluate differences.</p>
     <ul>
       <li>Side-by-side and stacked comparison</li>
+      <li>Grid layout when four or more images are loaded</li>
       <li>Zoom and pan tools</li>
       <li>Create a heatmap of differences between two images</li>
       <li>Support for multiple image formats</li>
@@ -20,7 +21,7 @@
   </description>
   <screenshots>
   <screenshot type="default">
-    <caption>Comparing two images side by side with a heatmap</caption>
+    <caption>Comparing two or more images side by side with a heatmap</caption>
     <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/image-compare-screenshot.png</image>
   </screenshot>
 </screenshots>
@@ -29,6 +30,14 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.0.3" date="2026-03-14">
+      <description>
+        <ul>
+          <li>Add portal-aware drag-and-drop for Flatpak environments</li>
+          <li>Add keyboard shortcuts for open, heatmap, display mode, and zoom reset</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.2" date="2026-03-10"/>
   </releases>
 </component>

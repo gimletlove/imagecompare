@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
     }
 
     QQmlApplicationEngine engine;
-    engine.rootContext()->setContextProperty("applicationController", &controller);
+    engine.rootContext()->setContextProperty("application_controller", &controller);
     const QUrl mainUrl(QStringLiteral("qrc:/Main.qml"));
     engine.load(mainUrl);
     if (engine.rootObjects().isEmpty()) {
