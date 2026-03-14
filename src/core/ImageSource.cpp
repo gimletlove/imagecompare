@@ -23,21 +23,18 @@ namespace {
 
     struct RenderCacheKey {
         QString normalized_path;
-        bool ignore_orientation = false;
         bool ignore_color_profile = false;
 
         friend bool operator==(const RenderCacheKey&, const RenderCacheKey&) = default;
     };
 
     uint qHash(const RenderCacheKey& key, uint seed = 0) noexcept {
-        return qHashMulti(seed, key.normalized_path, key.ignore_orientation, key.ignore_color_profile);
+        return qHashMulti(seed, key.normalized_path, key.ignore_color_profile);
     }
 
     vips::VImage load_image_for_spec(const QString& path, const RenderSpec& spec) {
         vips::VImage image = vips::VImage::new_from_file(path.toUtf8().constData());
-        if (!spec.ignore_orientation) {
-            image = image.autorot();
-        }
+        image = image.autorot();
         if (!spec.ignore_color_profile) {
             const bool has_embedded_icc_profile = image.get_typeof("icc-profile-data") != 0;
             if (has_embedded_icc_profile) {
@@ -113,7 +110,6 @@ namespace {
     RenderCacheKey make_render_cache_key(const QString& normalized_path, const RenderSpec& spec) {
         return RenderCacheKey{
             .normalized_path = normalized_path,
-            .ignore_orientation = spec.ignore_orientation,
             .ignore_color_profile = spec.ignore_color_profile,
         };
     }
@@ -204,7 +200,6 @@ QSize ImageSource::pixel_size() const {
 RenderSpec ImageSource::render_spec(DisplayMode mode) const noexcept {
     if (mode == DisplayMode::StrictRaw) {
         return {
-            .ignore_orientation = false,
             .ignore_color_profile = true,
         };
     }

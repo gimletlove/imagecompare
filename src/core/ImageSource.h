@@ -9,7 +9,6 @@
 #include "core/WorkspaceDocument.h"
 
 struct RenderSpec {
-    bool ignore_orientation = false;
     bool ignore_color_profile = false;
 };
 

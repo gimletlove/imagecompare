@@ -441,7 +441,6 @@ void TiledImageItem::mouseReleaseEvent(QMouseEvent* event) {
 RenderSpec TiledImageItem::current_render_spec() const noexcept {
     if (m_display_mode == static_cast<int>(DisplayMode::StrictRaw)) {
         return {
-            .ignore_orientation = false,
             .ignore_color_profile = true,
         };
     }
