@@ -15,6 +15,7 @@ Linux Image Comparison Program with various helpful features and tools.
 ## Runtime Requirements
 
 - Qt6 runtime libraries
+- KDE Frameworks 6 CoreAddons runtime libraries
 - libvips runtime libraries
 
 ## How To Use
@@ -34,6 +35,7 @@ Linux Image Comparison Program with various helpful features and tools.
 - C++20 compiler
 - CMake 3.21+
 - Qt6
+- KDE Frameworks 6 CoreAddons
 - libvips & vips-cpp
 
 ```bash
