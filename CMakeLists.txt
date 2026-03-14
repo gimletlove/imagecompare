@@ -82,6 +82,11 @@ target_link_libraries(imagecompare
         Qt6::QuickControls2
 )
 
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    target_compile_options(image_compare_core PRIVATE -mno-direct-extern-access)
+    target_compile_options(imagecompare PRIVATE -mno-direct-extern-access)
+endif()
+
 install(TARGETS imagecompare
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
