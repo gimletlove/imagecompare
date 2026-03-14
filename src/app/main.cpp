@@ -4,8 +4,10 @@
 #include <QIcon>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QWindow>
 
 #include "app/ApplicationController.h"
+#include "app/WindowDropFilter.h"
 #include "ui/TiledImageItem.h"
 
 extern "C" {
@@ -31,6 +33,11 @@ int main(int argc, char* argv[]) {
     engine.load(mainUrl);
     if (engine.rootObjects().isEmpty()) {
         return -1;
+    }
+    auto* root_window = qobject_cast<QWindow*>(engine.rootObjects().constFirst());
+    if (root_window != nullptr) {
+        auto* window_drop_filter = new WindowDropFilter(&controller, root_window);
+        root_window->installEventFilter(window_drop_filter);
     }
 
     const int exit_code = app.exec();

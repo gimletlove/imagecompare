@@ -32,6 +32,7 @@ add_library(image_compare_core
     src/core/ViewState.cpp
     src/core/TilePyramid.cpp
     src/app/ApplicationController.cpp
+    src/app/WindowDropFilter.cpp
     src/ui/TiledImageItem.cpp
     src/ui/TileTextureCache.cpp
 )
@@ -59,6 +60,7 @@ target_include_directories(image_compare_core
 )
 target_link_libraries(image_compare_core
     PUBLIC
+        KF6::CoreAddons
         Qt6::Core
         Qt6::Gui
         Qt6::Quick
