@@ -10,27 +10,12 @@ ApplicationWindow {
     title: "Image Compare"
     property bool drop_active: false
 
-    function normalize_paths(paths) {
-        const out = [];
-        if (!paths) {
-            return out;
-        }
-        for (let i = 0; i < paths.length; ++i) {
-            out.push(String(paths[i]));
-        }
-        return out;
-    }
-
     DropArea {
         anchors.fill: parent
         onEntered: window.drop_active = true
         onExited: window.drop_active = false
-        onDropped: (drop_event) => {
+        onDropped: () => {
             window.drop_active = false;
-            if (!applicationController) {
-                return;
-            }
-            applicationController.import_image_paths(window.normalize_paths(drop_event.urls));
         }
     }
 
