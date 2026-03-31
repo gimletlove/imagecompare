@@ -14,6 +14,7 @@ class ApplicationController : public QObject {
     Q_OBJECT
     Q_PROPERTY(WorkspaceDocument* workspace READ workspace CONSTANT)
     Q_PROPERTY(DisplayMode display_mode READ display_mode NOTIFY display_mode_changed)
+    Q_PROPERTY(bool heatmap_in_progress READ heatmap_in_progress NOTIFY heatmap_in_progress_changed)
 
    public:
     explicit ApplicationController(QObject* parent = nullptr);
@@ -28,9 +29,11 @@ class ApplicationController : public QObject {
 
     [[nodiscard]] WorkspaceDocument* workspace() noexcept;
     [[nodiscard]] DisplayMode display_mode() const noexcept { return m_workspace.display_mode(); }
+    [[nodiscard]] bool heatmap_in_progress() const noexcept { return !m_pending_heatmap_jobs.isEmpty(); }
 
    Q_SIGNALS:
     void display_mode_changed();
+    void heatmap_in_progress_changed();
 
    private Q_SLOTS:
     void on_job_finished(QUuid job_id, ComparisonResult result);

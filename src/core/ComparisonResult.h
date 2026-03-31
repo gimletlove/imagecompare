@@ -7,8 +7,8 @@
 #include "core/WorkspaceDocument.h"
 
 struct ComparisonRequest {
-    QUuid left_image_handle_id;
-    QUuid right_image_handle_id;
+    QUuid first_image_handle_id;
+    QUuid second_image_handle_id;
     DisplayMode display_mode = DisplayMode::Faithful;
 };
 
@@ -21,9 +21,8 @@ enum class ComparisonErrorCode {
 };
 
 struct ComparisonSummary {
-    double normalized_mean = 0.0;
-    double normalized_p95 = 0.0;
-    double changed_pixel_ratio = 0.0;
+    double average_de00 = 0.0;
+    double p95_de00 = 0.0;
     double max_value = 0.0;
 };
 

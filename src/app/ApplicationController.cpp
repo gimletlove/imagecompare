@@ -114,6 +114,7 @@ void ApplicationController::set_display_mode_and_reset_heatmap(DisplayMode mode)
 }
 
 void ApplicationController::clear_existing_derived_heatmaps() {
+    const bool was_heatmap_in_progress = heatmap_in_progress();
     const QStringList paths_to_remove = tracked_generated_heatmap_paths_in_workspace();
     QVector<QUuid> handles_to_release;
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
@@ -129,13 +130,17 @@ void ApplicationController::clear_existing_derived_heatmaps() {
     for (const QUuid& handle_id : handles_to_release) {
         release_image_handle_if_unused(handle_id);
     }
+    if (was_heatmap_in_progress != heatmap_in_progress()) {
+        Q_EMIT heatmap_in_progress_changed();
+    }
 }
 
 void ApplicationController::build_heatmap() {
-    if (!m_workspace.can_build_heatmap()) {
+    if (heatmap_in_progress() || !m_workspace.can_build_heatmap()) {
         return;
     }
 
+    const bool was_heatmap_in_progress = heatmap_in_progress();
     QVector<ViewableImageEntry> source_images;
     source_images.reserve(2);
     for (int index = 0; index < m_workspace.entry_count() && source_images.size() < 2; ++index) {
@@ -150,44 +155,53 @@ void ApplicationController::build_heatmap() {
 
     clear_existing_derived_heatmaps();
     const QUuid job_id = m_job_queue.enqueue({
-        .left_image_handle_id = source_images[0].image_handle_id(),
-        .right_image_handle_id = source_images[1].image_handle_id(),
+        .first_image_handle_id = source_images[0].image_handle_id(),
+        .second_image_handle_id = source_images[1].image_handle_id(),
         .display_mode = m_workspace.display_mode(),
     });
     m_pending_heatmap_jobs.insert(job_id);
     m_in_flight_heatmap_handles_by_job.insert(job_id, {source_images[0].image_handle_id(), source_images[1].image_handle_id()});
+    if (was_heatmap_in_progress != heatmap_in_progress()) {
+        Q_EMIT heatmap_in_progress_changed();
+    }
 }
 
 WorkspaceDocument* ApplicationController::workspace() noexcept { return &m_workspace; }
 
 void ApplicationController::on_job_finished(QUuid job_id, ComparisonResult result) {
+    const bool was_heatmap_in_progress = heatmap_in_progress();
+    const auto emit_heatmap_state_if_changed = [this, was_heatmap_in_progress]() {
+        if (was_heatmap_in_progress != heatmap_in_progress()) {
+            Q_EMIT heatmap_in_progress_changed();
+        }
+    };
     m_in_flight_heatmap_handles_by_job.remove(job_id);
     flush_deferred_image_handle_releases();
     if (!m_pending_heatmap_jobs.remove(job_id)) {
         if (result.success && !result.output_path.isEmpty()) {
             delete_generated_heatmap_file(result.output_path);
         }
+        emit_heatmap_state_if_changed();
         return;
     }
     if (!result.success || result.output_path.isEmpty()) {
+        emit_heatmap_state_if_changed();
         return;
     }
 
     try {
         const QUuid result_handle_id = m_repository.load(result.output_path);
         const auto result_source = m_repository.image(result_handle_id);
-        const QString display_mode_tag =
-            m_workspace.display_mode() == DisplayMode::StrictRaw ? QStringLiteral("strict raw") : QStringLiteral("faithful");
-        const QString summary_label = QStringLiteral("mean %1 • p95 %2 • %3% changed • %4")
-                                          .arg(result.summary.normalized_mean, 0, 'f', 4)
-                                          .arg(result.summary.normalized_p95, 0, 'f', 4)
-                                          .arg(result.summary.changed_pixel_ratio * 100.0, 0, 'f', 1)
-                                          .arg(display_mode_tag);
+        const QString summary_label = QStringLiteral("overall dE00 %1 • hotspots dE00 %2")
+                                          .arg(result.summary.average_de00, 0, 'f', 2)
+                                          .arg(result.summary.p95_de00, 0, 'f', 2);
+
         const QUuid entry_id =
             m_workspace.add_derived_entry(result_handle_id, result.output_path, result_source->pixel_size(), summary_label);
         if (entry_id.isNull()) {
             delete_generated_heatmap_file(result.output_path);
             static_cast<void>(m_repository.release(result_handle_id));
+            emit_heatmap_state_if_changed();
             return;
         }
         m_generated_heatmap_paths.insert(result.output_path);
@@ -197,14 +211,19 @@ void ApplicationController::on_job_finished(QUuid job_id, ComparisonResult resul
         }
         qWarning().noquote() << "Failed to load generated heatmap result" << result.output_path << ":" << ex.what();
     }
+    emit_heatmap_state_if_changed();
 }
 
 void ApplicationController::on_job_failed(QUuid job_id, const QString& error_text) {
+    const bool was_heatmap_in_progress = heatmap_in_progress();
     m_pending_heatmap_jobs.remove(job_id);
     m_in_flight_heatmap_handles_by_job.remove(job_id);
     flush_deferred_image_handle_releases();
     qWarning().noquote() << "Heatmap job failed for" << job_id.toString(QUuid::WithoutBraces) << ":"
                          << (error_text.isEmpty() ? QStringLiteral("unknown error") : error_text);
+    if (was_heatmap_in_progress != heatmap_in_progress()) {
+        Q_EMIT heatmap_in_progress_changed();
+    }
 }
 
 bool ApplicationController::workspace_references_image_handle(const QUuid& handle_id) const {

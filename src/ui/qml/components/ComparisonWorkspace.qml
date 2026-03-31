@@ -78,6 +78,7 @@ Item {
                 can_display_mode_action: panes_grid.can_best_fit_action
                 can_overlay_action: panes_grid.can_overlay_action
                 can_match_zoom_action: panes_grid.can_match_zoom_action
+                heatmap_in_progress: root.controller ? root.controller.heatmap_in_progress : false
                 display_mode_toggle_text: root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful"
                 onOpen_requested: root.open_requested()
                 onCompare_tools_requested: {

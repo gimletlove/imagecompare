@@ -12,6 +12,7 @@ Item {
     property bool can_display_mode_action: false
     property bool can_overlay_action: false
     property bool can_match_zoom_action: false
+    property bool heatmap_in_progress: false
     property string display_mode_toggle_text: "Faithful"
     signal open_requested()
     signal compare_tools_requested()
@@ -40,7 +41,8 @@ Item {
 
         ToolButton {
             text: "Build Heatmap (b)"
-            enabled: root.workspace ? (root.workspace.can_build_heatmap && root.workspace.entry_count === 2) : false
+            enabled: !root.heatmap_in_progress
+                && (root.workspace ? (root.workspace.can_build_heatmap && root.workspace.entry_count === 2) : false)
             property string tool_tip_text: "Build a heatmap of the level of difference from two images"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
@@ -83,7 +85,7 @@ Item {
             checkable: true
             checked: root.overlay_mode_active
             enabled: root.can_overlay_action
-            property string tool_tip_text: "Stack source panes and cycle with arrow keys"
+            property string tool_tip_text: "Stack image panes and cycle with arrow keys"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
             focusPolicy: Qt.NoFocus
