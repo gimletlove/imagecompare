@@ -1,5 +1,6 @@
 # Image Compare — Linux Image Comparison & Visual Diff Tool
 
+[![GitHub Release](https://img.shields.io/github/v/release/gimletlove/imagecompare?label=release)](https://github.com/gimletlove/imagecompare/releases)
 [![Flathub](https://img.shields.io/flathub/v/io.github.gimletlove.imagecompare?label=Flathub)](https://flathub.org/apps/details/io.github.gimletlove.imagecompare)
 [![AUR](https://img.shields.io/aur/version/imagecompare-bin?label=AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
