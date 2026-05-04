@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(image_compare VERSION 1.1 LANGUAGES CXX)
+project(image_compare VERSION 1.1.1 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -20,6 +20,10 @@ add_compile_definitions(QT_NO_KEYWORDS)
 
 include(cmake/Dependencies.cmake)
 
+if(QT_KNOWN_POLICY_QTP0004)
+    qt_policy(SET QTP0004 NEW)
+endif()
+
 add_library(image_compare_core
     src/core/WorkspaceDocument.cpp
     src/core/ViewableImageEntry.cpp
@@ -33,20 +37,6 @@ add_library(image_compare_core
     src/core/TilePyramid.cpp
     src/app/ApplicationController.cpp
     src/app/WindowDropFilter.cpp
-    src/ui/TiledImageItem.cpp
-    src/ui/TileTextureCache.cpp
-)
-qt_add_resources(image_compare_core image_compare_qml_resources
-    PREFIX "/"
-    BASE ${CMAKE_CURRENT_SOURCE_DIR}/src/ui/qml
-    FILES
-        src/ui/qml/Main.qml
-        src/ui/qml/components/AppToolbar.qml
-        src/ui/qml/components/ComparisonPaneItem.qml
-        src/ui/qml/components/ComparisonWorkspace.qml
-        src/ui/qml/components/PaneHeader.qml
-        src/ui/qml/components/PaneGridInteractionController.qml
-        src/ui/qml/components/PanesGrid.qml
 )
 qt_add_resources(image_compare_core image_compare_app_resources
     PREFIX "/"
@@ -71,6 +61,44 @@ target_link_libraries(image_compare_core
 
 add_executable(imagecompare
     src/app/main.cpp
+)
+set(qml_component_files
+    src/ui/qml/components/AppToolbar.qml
+    src/ui/qml/components/ComparisonPaneItem.qml
+    src/ui/qml/components/ComparisonWorkspace.qml
+    src/ui/qml/components/PaneHeader.qml
+    src/ui/qml/components/PaneGridInteractionController.qml
+    src/ui/qml/components/PanesGrid.qml
+)
+foreach(qml_component_file IN LISTS qml_component_files)
+    get_filename_component(qml_component_name "${qml_component_file}" NAME)
+    set_source_files_properties("${qml_component_file}"
+        PROPERTIES QT_RESOURCE_ALIAS "components/${qml_component_name}"
+    )
+endforeach()
+set_source_files_properties(
+    src/ui/qml/Main.qml
+    PROPERTIES QT_RESOURCE_ALIAS Main.qml
+)
+qt_add_qml_module(imagecompare
+    URI ImageCompare
+    VERSION 1.0
+    RESOURCE_PREFIX /qt/qml
+    SOURCES
+        src/ui/TiledImageItem.h
+        src/ui/TiledImageItem.cpp
+        src/ui/TileTextureCache.h
+        src/ui/TileTextureCache.cpp
+    QML_FILES
+        src/ui/qml/Main.qml
+        ${qml_component_files}
+    DEPENDENCIES
+        QtQml
+        QtQuick
+)
+target_include_directories(imagecompare
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
 )
 target_link_libraries(imagecompare
     PRIVATE

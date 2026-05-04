@@ -1,4 +1,3 @@
-#include <QtQml/qqml.h>
 #include <vips/vips.h>
 
 #include <QApplication>
@@ -9,24 +8,25 @@
 
 #include "app/ApplicationController.h"
 #include "app/WindowDropFilter.h"
-#include "ui/TiledImageItem.h"
 
 int main(int argc, char* argv[]) {
+    qputenv("QML_DISK_CACHE", "aot");
+
     QApplication app(argc, argv);
     const QStringList launch_arguments = app.arguments().mid(1);
     app.setApplicationName(QStringLiteral("io.github.gimletlove.imagecompare"));
     app.setDesktopFileName(QStringLiteral("io.github.gimletlove.imagecompare"));
     app.setWindowIcon(QIcon(QStringLiteral(":/imagecompare.svg")));
 
-    qmlRegisterType<TiledImageItem>("ImageCompare", 1, 0, "TiledImageItem");
     ApplicationController controller;
     if (!launch_arguments.isEmpty()) {
         controller.import_image_paths(launch_arguments);
     }
 
     QQmlApplicationEngine engine;
+    engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
     engine.rootContext()->setContextProperty("application_controller", &controller);
-    const QUrl mainUrl(QStringLiteral("qrc:/Main.qml"));
+    const QUrl mainUrl(QStringLiteral("qrc:/qt/qml/ImageCompare/Main.qml"));
     engine.load(mainUrl);
     if (engine.rootObjects().isEmpty()) {
         return -1;

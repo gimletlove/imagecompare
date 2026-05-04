@@ -10,6 +10,7 @@
 #include <QSize>
 #include <QString>
 #include <QVector>
+#include <QtQmlIntegration/qqmlintegration.h>
 #include <QtGlobal>
 
 #include "core/ImageSource.h"
@@ -31,6 +32,7 @@ Q_ALWAYS_INLINE uint qHash(const TileRenderRequestKey& key, uint seed = 0) noexc
 
 class TiledImageItem : public QQuickItem {
     Q_OBJECT
+    QML_ELEMENT
     Q_PROPERTY(QString image_path READ image_path WRITE set_image_path NOTIFY image_path_changed)
     Q_PROPERTY(int display_mode READ display_mode WRITE set_display_mode NOTIFY display_mode_changed)
     Q_PROPERTY(QRectF viewport_rect READ viewport_rect WRITE set_viewport_rect NOTIFY viewport_rect_changed)

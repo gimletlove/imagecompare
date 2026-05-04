@@ -30,7 +30,7 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="1.1" date="2026-05-04">
+    <release version="1.1.1" date="2026-05-04">
       <description>
         <ul>
           <li>Improve zooming and panning performance and eliminate flickers</li>
@@ -38,6 +38,7 @@
           <li>Add heatmap export to disk</li>
           <li>Changed the heatmap colors and score readouts</li>
           <li>General Bug fixes, performance and UX improvements</li>
+          <li>Use compiled QML module packaging and avoid stale user QML disk cache after updates</li>
         </ul>
       </description>
     </release>
