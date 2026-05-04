@@ -15,25 +15,36 @@
       <li>Side-by-side and stacked comparison</li>
       <li>Grid layout when four or more images are loaded</li>
       <li>Zoom and pan tools, including normalization across image dimensions</li>
-      <li>Create a heatmap of differences between two images</li>
+      <li>Create and export heatmaps of differences between two same-size images</li>
       <li>Support for multiple image formats</li>
     </ul>
   </description>
   <screenshots>
-  <screenshot type="default">
-    <caption>Comparing two images side by side with a heatmap</caption>
-    <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/image-compare-screenshot.png</image>
-  </screenshot>
-</screenshots>
+    <screenshot type="default">
+      <caption>Comparing two images side by side with a heatmap</caption>
+      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/image-compare-screenshot.png</image>
+    </screenshot>
+  </screenshots>
   <url type="homepage">https://github.com/gimletlove/imagecompare</url>
   <url type="bugtracker">https://github.com/gimletlove/imagecompare/issues</url>
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1" date="2026-05-04">
+      <description>
+        <ul>
+          <li>Improve zooming and panning performance and eliminate flickers</li>
+          <li>Add active pane selection, focused image view, image reordering, and pane context menu actions</li>
+          <li>Add heatmap export to disk</li>
+          <li>Changed the heatmap colors and score readouts</li>
+          <li>General Bug fixes, performance and UX improvements</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.0.4" date="2026-03-31">
       <description>
         <ul>
-          <li>Use a perceptual heatmap metric based on dE00 color difference similar to butteraugli</li>
+          <li>Use a perceptual heatmap metric based on dE00 color difference</li>
           <li>Simplify heatmap summaries to overall (average) and hotspot (p95) dE00 values</li>
           <li>Disable Build Heatmap while a heatmap job is processing</li>
           <li>Fix heatmap generation failures for uncommon image band layouts</li>

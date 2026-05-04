@@ -17,13 +17,16 @@ Use it to compare screenshots, rendered images, exports, design revisions, befor
 
 - Compare two or more images side by side
 - Stack images and cycle between them with arrow keys
+- Focus the active image with Enter, and reorder images with Ctrl+Left / Ctrl+Right
 - Match zoom and pan across images with different dimensions
-- Generate perceptual heatmap differences between two same-size images
+- Generate perceptual heatmap differences between two same-size images, with overall and peak dE00 readouts
+- Export generated heatmaps
+- Use pane context menus to copy paths, open containing folders, move images, and close files
 - Use a grid layout when four or more images are loaded
 - Render images faithfully with embedded color profiles, or view them in raw mode
 - Open images with drag-and-drop, file picker, command-line arguments, or your file manager’s **Open With** menu
 - Load, zoom, and pan large images efficiently
-  
+
 ## Install
 
 ### Flathub
@@ -47,11 +50,14 @@ yay -S imagecompare-bin
 - Drag and drop image files into the app, or use **Open** or press `o` in the toolbar.
 - Pass image paths on the command line when launching the app.
 - Use **Open With** from your file manager, if supported, to open selected images in Image Compare.
-- Use **Best Fit** or press `f` to fit images to their viewport.
+- Use the zoom readout or press `f` to toggle between best fit and 100% zoom.
 - Use **Stack** or press `v` to stack images and cycle between them with the arrow keys.
 - Use **Match Zoom** or press `h` to normalize zoom and pan across images with different dimensions.
 - Use **Faithful / Raw** or press `r` to switch between embedded color-profile rendering and raw display mode.
-- Use **Build Heatmap** or press `b` to build a pereceptual heatmap of differences from 2 images with the same dimension.
+- Use **Build Heatmap** or press `b` to build a perceptual heatmap of differences from 2 images with the same dimensions.
+- Right-click an image pane to open the context menu for further actions.
+- Use Ctrl+W on the active pane to close it.
+- Use Ctrl+Left and Ctrl+Right to move the images.
 
 ## Use Cases
 

@@ -5,5 +5,7 @@ Exec=imagecompare %F
 Icon=io.github.gimletlove.imagecompare
 Type=Application
 Terminal=false
+StartupNotify=true
 Categories=Graphics;Viewer;
+Keywords=image;compare;diff;visual;heatmap;
 MimeType=image/png;image/jpeg;image/webp;image/avif;image/jxl;image/heic;image/heif;image/tiff;image/bmp;
