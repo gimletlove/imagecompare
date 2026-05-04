@@ -12,23 +12,13 @@ struct ComparisonRequest {
     DisplayMode display_mode = DisplayMode::Faithful;
 };
 
-enum class ComparisonErrorCode {
-    None,
-    InvalidRequest,
-    InvalidImageHandle,
-    DimensionMismatch,
-    ProcessingFailed,
-};
-
 struct ComparisonSummary {
-    double average_de00 = 0.0;
-    double p95_de00 = 0.0;
-    double max_value = 0.0;
+    double overall_de00 = 0.0;
+    double peak_de00 = 0.0;
 };
 
 struct ComparisonResult {
     bool success = false;
-    ComparisonErrorCode error_code = ComparisonErrorCode::None;
     QString error_text;
     QString output_path;
     ComparisonSummary summary;

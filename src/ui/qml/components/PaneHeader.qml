@@ -24,7 +24,7 @@ Item {
             return raw_primary.slice(0, root.max_primary_chars - 3) + "...";
         }
 
-        const extension = raw_primary.slice(dot_index);
+        const extension = raw_primary.slice(dot_index + 1);
         const suffix_budget = root.max_primary_chars - 3;
         if (extension.length >= suffix_budget) {
             return "..." + extension.slice(extension.length - suffix_budget);
@@ -60,6 +60,8 @@ Item {
             implicitWidth: 22
             implicitHeight: 22
             focusPolicy: Qt.NoFocus
+            ToolTip.visible: hovered
+            ToolTip.text: "Remove image"
             onClicked: root.remove_requested()
         }
     }

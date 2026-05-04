@@ -1,7 +1,6 @@
 #include "app/WindowDropFilter.h"
 
 #include <KUrlMimeData>
-
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QEvent>
@@ -10,8 +9,7 @@
 
 #include "app/ApplicationController.h"
 
-WindowDropFilter::WindowDropFilter(ApplicationController* controller, QObject* parent)
-    : QObject(parent), m_controller(controller) {}
+WindowDropFilter::WindowDropFilter(ApplicationController* controller, QObject* parent) : QObject(parent), m_controller(controller) {}
 
 bool WindowDropFilter::eventFilter(QObject* watched, QEvent* event) {
     Q_UNUSED(watched);
@@ -53,7 +51,7 @@ QList<QUrl> WindowDropFilter::decode_urls(const QMimeData* mime_data) const {
 
     QList<QUrl> urls = KUrlMimeData::urlsFromMimeData(mime_data, KUrlMimeData::PreferLocalUrls);
     if (urls.isEmpty()) { // fallback
-        urls = mime_data->urls(); 
+        urls = mime_data->urls();
     }
     return urls;
 }

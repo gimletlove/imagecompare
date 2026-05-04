@@ -172,6 +172,24 @@ QtObject {
         return true;
     }
 
+    function toggle_zoom_fit() {
+        if (pane_repeater.count <= 0) {
+            return false;
+        }
+
+        const source_pane = active_sync_pane();
+        if (!source_pane) {
+            return false;
+        }
+
+        const current_zoom = Number(source_pane.zoom_factor_value);
+        const best_fit_zoom = Number(source_pane.current_best_fit_zoom());
+        if (best_fit_zoom > 0.0 && Math.abs(current_zoom - best_fit_zoom) <= Math.max(0.001, best_fit_zoom * 0.01)) {
+            return set_zoom100();
+        }
+        return set_best_fit();
+    }
+
     function schedule_best_fit_refresh() {
         if (!shared_best_fit_active || best_fit_refresh_scheduled) {
             return;

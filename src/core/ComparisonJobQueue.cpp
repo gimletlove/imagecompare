@@ -1,18 +1,15 @@
 #include "core/ComparisonJobQueue.h"
 
+#include <vips/vips.h>
+
 #include <QMetaObject>
 #include <QMetaType>
 #include <QPointer>
 #include <QRunnable>
 #include <QThreadPool>
 #include <exception>
-#include <functional>
 
 #include "core/ComparisonService.h"
-
-extern "C" {
-    void vips_thread_shutdown(void);
-}
 
 ComparisonJobQueue::ComparisonJobQueue(ComparisonService& service, QObject* parent) : QObject(parent), m_service(service) {
     qRegisterMetaType<ComparisonResult>("ComparisonResult");
@@ -23,25 +20,14 @@ ComparisonJobQueue::~ComparisonJobQueue() { m_thread_pool.waitForDone(); }
 QUuid ComparisonJobQueue::enqueue(const ComparisonRequest& request) {
     const QUuid job_id = QUuid::createUuid();
     QPointer<ComparisonJobQueue> queue_guard(this);
-    std::reference_wrapper<ComparisonService> service = m_service;
 
-    QMetaObject::invokeMethod(
-        this,
-        [queue_guard, job_id]() {
-            if (queue_guard == nullptr) {
-                return;
-            }
-            Q_EMIT queue_guard->job_started(job_id);
-        },
-        Qt::QueuedConnection);
-
-    auto task = QRunnable::create([queue_guard, service, job_id, request]() {
+    auto task = QRunnable::create([queue_guard, &service = m_service, job_id, request]() {
         struct VipsThreadGuard {
             ~VipsThreadGuard() { vips_thread_shutdown(); }
         } vips_thread_guard;
 
         try {
-            const ComparisonResult result = service.get().run(request);
+            const ComparisonResult result = service.run(request);
             if (queue_guard == nullptr) {
                 return;
             }

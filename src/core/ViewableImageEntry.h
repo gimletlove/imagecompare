@@ -3,10 +3,11 @@
 #include <QSize>
 #include <QString>
 #include <QUuid>
+#include <cstdint>
 
 class ViewableImageEntry {
    public:
-    enum class EntryKind {
+    enum class EntryKind : std::uint8_t {
         Source,
         Derived,
     };
@@ -23,8 +24,6 @@ class ViewableImageEntry {
     [[nodiscard]] QString image_path() const;
     [[nodiscard]] QString primary_header_label() const;
     [[nodiscard]] QString secondary_header_label() const;
-    [[nodiscard]] QString label() const;
-    [[nodiscard]] QString entry_kind_name() const;
 
    private:
     EntryKind m_kind = EntryKind::Source;

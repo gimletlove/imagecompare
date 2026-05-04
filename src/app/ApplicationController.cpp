@@ -1,10 +1,16 @@
 #include "app/ApplicationController.h"
 
+#include <QClipboard>
+#include <QDateTime>
 #include <QDebug>
+#include <QDesktopServices>
+#include <QDir>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QGuiApplication>
 #include <QSet>
+#include <QStandardPaths>
 #include <QString>
 #include <QStringList>
 #include <QUrl>
@@ -46,18 +52,21 @@ void ApplicationController::import_image_paths(const QStringList& paths) {
             continue;
         }
 
+        QUuid handle_id;
         try {
-            const QUuid handle_id = m_repository.load(normalized_path);
+            handle_id = m_repository.load(normalized_path);
             if (existing_source_handles.contains(handle_id)) {
                 continue;
             }
             const auto source = m_repository.image(handle_id);
-            if (m_workspace.add_source_entry(handle_id, normalized_path, source->pixel_size()).isNull()) {
+            const QSize pixel_size = source->pixel_size();
+            if (m_workspace.add_source_entry(handle_id, normalized_path, pixel_size).isNull()) {
                 release_image_handle_if_unused(handle_id);
                 continue;
             }
             existing_source_handles.insert(handle_id);
         } catch (const std::exception& ex) {
+            release_image_handle_if_unused(handle_id);
             qWarning().noquote() << "Failed to import image path" << normalized_path << ":" << ex.what();
         }
     }
@@ -101,6 +110,68 @@ bool ApplicationController::remove_workspace_entry_by_id(const QString& entry_id
     return removed;
 }
 
+bool ApplicationController::move_workspace_entry_by_id(const QString& entry_id, int direction) {
+    return m_workspace.move_entry_by_id(QUuid(entry_id), direction);
+}
+
+bool ApplicationController::copy_path_to_clipboard(const QString& path) const {
+    if (path.isEmpty() || QGuiApplication::clipboard() == nullptr) {
+        return false;
+    }
+    QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(path));
+    return true;
+}
+
+bool ApplicationController::open_containing_folder(const QString& path) const {
+    const QFileInfo file_info(path);
+    if (path.isEmpty() || file_info.absolutePath().isEmpty()) {
+        return false;
+    }
+    return QDesktopServices::openUrl(QUrl::fromLocalFile(file_info.absolutePath()));
+}
+
+bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const {
+    const QUuid parsed_entry_id(entry_id);
+    QString heatmap_path;
+    for (int index = 0; index < m_workspace.entry_count(); ++index) {
+        const auto entry = m_workspace.entry_at(index);
+        if (entry.entry_id() == parsed_entry_id && entry.is_derived()) {
+            heatmap_path = entry.image_path();
+            break;
+        }
+    }
+    if (heatmap_path.isEmpty()) {
+        return false;
+    }
+
+    QString default_directory = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
+    if (default_directory.isEmpty()) {
+        default_directory = QDir::homePath();
+    }
+    const QString timestamp = QDateTime::currentDateTime().toString(QStringLiteral("yyyy-MM-dd-HHmmss"));
+    const QString default_path = QDir(default_directory).filePath(QStringLiteral("imagecompare-heatmap-%1.png").arg(timestamp));
+    QString output_path =
+        QFileDialog::getSaveFileName(nullptr, QStringLiteral("Export Heatmap"), default_path, QStringLiteral("PNG Image (*.png)"));
+    if (output_path.isEmpty()) {
+        return false;
+    }
+    if (QFileInfo(output_path).suffix().isEmpty()) {
+        output_path += QStringLiteral(".png");
+    }
+    if (QFileInfo(heatmap_path).absoluteFilePath() == QFileInfo(output_path).absoluteFilePath()) {
+        return true;
+    }
+    if (QFileInfo::exists(output_path) && !QFile::remove(output_path)) {
+        qWarning().noquote() << "Failed to overwrite exported heatmap" << output_path;
+        return false;
+    }
+    if (!QFile::copy(heatmap_path, output_path)) {
+        qWarning().noquote() << "Failed to export heatmap" << heatmap_path << "to" << output_path;
+        return false;
+    }
+    return true;
+}
+
 void ApplicationController::set_display_mode_faithful() { set_display_mode_and_reset_heatmap(DisplayMode::Faithful); }
 
 void ApplicationController::set_display_mode_strict_raw() { set_display_mode_and_reset_heatmap(DisplayMode::StrictRaw); }
@@ -109,8 +180,8 @@ void ApplicationController::set_display_mode_and_reset_heatmap(DisplayMode mode)
     if (m_workspace.display_mode() == mode) {
         return;
     }
-    m_workspace.set_display_mode(mode);
     clear_existing_derived_heatmaps();
+    m_workspace.set_display_mode(mode);
 }
 
 void ApplicationController::clear_existing_derived_heatmaps() {
@@ -168,7 +239,7 @@ void ApplicationController::build_heatmap() {
 
 WorkspaceDocument* ApplicationController::workspace() noexcept { return &m_workspace; }
 
-void ApplicationController::on_job_finished(QUuid job_id, ComparisonResult result) {
+void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult& result) {
     const bool was_heatmap_in_progress = heatmap_in_progress();
     const auto emit_heatmap_state_if_changed = [this, was_heatmap_in_progress]() {
         if (was_heatmap_in_progress != heatmap_in_progress()) {
@@ -192,9 +263,9 @@ void ApplicationController::on_job_finished(QUuid job_id, ComparisonResult resul
     try {
         const QUuid result_handle_id = m_repository.load(result.output_path);
         const auto result_source = m_repository.image(result_handle_id);
-        const QString summary_label = QStringLiteral("overall dE00 %1 • hotspots dE00 %2")
-                                          .arg(result.summary.average_de00, 0, 'f', 2)
-                                          .arg(result.summary.p95_de00, 0, 'f', 2);
+        const QString summary_label = QStringLiteral("overall dE00 %1 • peak dE00 %2")
+                                          .arg(result.summary.overall_de00, 0, 'f', 2)
+                                          .arg(result.summary.peak_de00, 0, 'f', 2);
 
         const QUuid entry_id =
             m_workspace.add_derived_entry(result_handle_id, result.output_path, result_source->pixel_size(), summary_label);

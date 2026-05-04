@@ -23,6 +23,10 @@ class ApplicationController : public QObject {
     Q_INVOKABLE void import_image_paths(const QStringList& paths);
     Q_INVOKABLE void open_images_with_native_dialog();
     Q_INVOKABLE bool remove_workspace_entry_by_id(const QString& entry_id);
+    Q_INVOKABLE bool move_workspace_entry_by_id(const QString& entry_id, int direction);
+    Q_INVOKABLE bool copy_path_to_clipboard(const QString& path) const;
+    Q_INVOKABLE bool open_containing_folder(const QString& path) const;
+    Q_INVOKABLE bool export_heatmap_by_id(const QString& entry_id) const;
     Q_INVOKABLE void set_display_mode_faithful();
     Q_INVOKABLE void set_display_mode_strict_raw();
     Q_INVOKABLE void build_heatmap();
@@ -35,11 +39,9 @@ class ApplicationController : public QObject {
     void display_mode_changed();
     void heatmap_in_progress_changed();
 
-   private Q_SLOTS:
-    void on_job_finished(QUuid job_id, ComparisonResult result);
-    void on_job_failed(QUuid job_id, const QString& error_text);
-
    private:
+    void on_job_finished(QUuid job_id, const ComparisonResult& result);
+    void on_job_failed(QUuid job_id, const QString& error_text);
     void set_display_mode_and_reset_heatmap(DisplayMode mode);
     void clear_existing_derived_heatmaps();
     [[nodiscard]] bool workspace_references_image_handle(const QUuid& handle_id) const;

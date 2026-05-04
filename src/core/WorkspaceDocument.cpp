@@ -1,5 +1,7 @@
 #include "core/WorkspaceDocument.h"
 
+#include <algorithm>
+
 WorkspaceDocument::WorkspaceDocument(QObject* parent) : QObject(parent), m_entries_model(this) {}
 
 QUuid WorkspaceDocument::add_source_entry(const QUuid& image_handle_id, const QString& path, const QSize& pixel_size) {
@@ -25,7 +27,7 @@ QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const Q
     const bool previous_can_build_heatmap = can_build_heatmap();
     const int previous_entry_count = entry_count();
 
-    for (int index = m_entries.size() - 1; index >= 0; --index) {
+    for (int index = static_cast<int>(m_entries.size()) - 1; index >= 0; --index) {
         if (!m_entries[index].is_derived()) {
             continue;
         }
@@ -93,7 +95,7 @@ bool WorkspaceDocument::remove_derived_heatmap_entries() {
     const bool previous_can_build_heatmap = can_build_heatmap();
     const int previous_entry_count = entry_count();
 
-    for (int index = m_entries.size() - 1; index >= 0; --index) {
+    for (int index = static_cast<int>(m_entries.size()) - 1; index >= 0; --index) {
         if (!m_entries[index].is_derived()) {
             continue;
         }
@@ -112,22 +114,39 @@ bool WorkspaceDocument::remove_derived_heatmap_entries() {
     return true;
 }
 
+bool WorkspaceDocument::move_entry_by_id(const QUuid& entry_id, int direction) {
+    if (direction == 0) {
+        return false;
+    }
+
+    int from = -1;
+    for (int index = 0; index < m_entries.size(); ++index) {
+        if (m_entries[index].entry_id() == entry_id) {
+            from = index;
+            break;
+        }
+    }
+    if (from < 0) {
+        return false;
+    }
+
+    const int last_index = static_cast<int>(m_entries.size()) - 1;
+    const int to = std::clamp(from + (direction < 0 ? -1 : 1), 0, last_index);
+    if (from == to) {
+        return false;
+    }
+
+    m_entries_model.move_entry(from, to);
+    m_entries.move(from, to);
+    return true;
+}
+
 void WorkspaceDocument::set_display_mode(DisplayMode mode) {
     if (m_display_mode == mode) {
         return;
     }
     m_display_mode = mode;
     Q_EMIT display_mode_changed();
-}
-
-int WorkspaceDocument::source_entry_count() const noexcept {
-    int source_count = 0;
-    for (const ViewableImageEntry& entry : m_entries) {
-        if (entry.is_source()) {
-            ++source_count;
-        }
-    }
-    return source_count;
 }
 
 bool WorkspaceDocument::can_build_heatmap() const noexcept {

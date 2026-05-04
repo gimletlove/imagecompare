@@ -13,7 +13,7 @@ Item {
             return false;
         }
         if (!panes_grid.can_best_fit_action) {
-            return true;
+            return false;
         }
         if (root.controller.display_mode === 0) {
             root.controller.set_display_mode_faithful();
@@ -25,7 +25,7 @@ Item {
 
     function toggle_overlay_mode() {
         if (!panes_grid.can_overlay_action) {
-            return true;
+            return false;
         }
         return panes_grid.toggle_overlay_mode();
     }
@@ -40,7 +40,7 @@ Item {
 
     function toggle_match_zoom() {
         if (!panes_grid.can_match_zoom_action) {
-            return true;
+            return false;
         }
         panes_grid.match_zoom_enabled = !panes_grid.match_zoom_enabled;
         if (panes_grid.match_zoom_enabled) {
@@ -53,9 +53,24 @@ Item {
 
     function apply_best_fit() {
         if (!panes_grid.can_best_fit_action) {
-            return true;
+            return false;
         }
         panes_grid.set_best_fit();
+        return true;
+    }
+
+    function toggle_zoom_fit() {
+        if (!panes_grid.can_best_fit_action) {
+            return false;
+        }
+        return panes_grid.toggle_zoom_fit();
+    }
+
+    function build_heatmap() {
+        if (!root.controller || !root.controller.workspace || !root.controller.workspace.can_build_heatmap) {
+            return false;
+        }
+        root.controller.build_heatmap();
         return true;
     }
 
@@ -70,40 +85,24 @@ Item {
 
             AppToolbar {
                 anchors.fill: parent
-                workspace: root.controller ? root.controller.workspace : null
                 zoom_readout: panes_grid.zoom_readout
                 overlay_mode_active: panes_grid.overlay_mode_enabled
                 match_zoom_enabled: panes_grid.match_zoom_enabled
                 can_best_fit_action: panes_grid.can_best_fit_action
                 can_display_mode_action: panes_grid.can_best_fit_action
+                can_heatmap_action: root.controller && root.controller.workspace
+                    ? root.controller.workspace.can_build_heatmap
+                    : false
                 can_overlay_action: panes_grid.can_overlay_action
                 can_match_zoom_action: panes_grid.can_match_zoom_action
                 heatmap_in_progress: root.controller ? root.controller.heatmap_in_progress : false
                 display_mode_toggle_text: root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful"
                 onOpen_requested: root.open_requested()
-                onCompare_tools_requested: {
-                    if (root.controller && root.controller.workspace && root.controller.workspace.can_build_heatmap) {
-                        root.controller.build_heatmap()
-                    }
-                }
-                onZoom100_requested: {
-                    if (!panes_grid.can_best_fit_action) {
-                        return;
-                    }
-                    panes_grid.set_zoom100();
-                }
-                onBest_fit_requested: {
-                    root.apply_best_fit();
-                }
-                onOverlay_mode_toggle_requested: {
-                    root.toggle_overlay_mode();
-                }
-                onMatch_zoom_toggle_requested: {
-                    root.toggle_match_zoom();
-                }
-                onDisplay_mode_toggle_requested: {
-                    root.toggle_display_mode();
-                }
+                onHeatmap_requested: root.build_heatmap()
+                onZoom_fit_toggle_requested: root.toggle_zoom_fit()
+                onOverlay_mode_toggle_requested: root.toggle_overlay_mode()
+                onMatch_zoom_toggle_requested: root.toggle_match_zoom()
+                onDisplay_mode_toggle_requested: root.toggle_display_mode()
             }
         }
 
@@ -120,7 +119,7 @@ Item {
 
             Pane {
                 anchors.centerIn: parent
-                visible: panes_grid.visible_pane_count === 0
+                visible: panes_grid.pane_count === 0
 
                 Label {
                     text: "Drop images here or click Open"
@@ -147,11 +146,7 @@ Item {
     Shortcut {
         sequence: "B"
         context: Qt.ApplicationShortcut
-        onActivated: {
-            if (root.controller && root.controller.workspace && root.controller.workspace.can_build_heatmap) {
-                root.controller.build_heatmap()
-            }
-        }
+        onActivated: root.build_heatmap()
     }
 
     Shortcut {
@@ -161,20 +156,51 @@ Item {
     }
 
     Shortcut {
-        sequence: "T"
+        sequence: "Ctrl+C"
         context: Qt.ApplicationShortcut
-        onActivated: {
-            if (!panes_grid.can_best_fit_action) {
-                return;
-            }
-            panes_grid.set_zoom100();
-        }
+        onActivated: panes_grid.copy_active_path()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+W"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.remove_active_entry()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Left"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.move_active_pane(-1)
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Right"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.move_active_pane(1)
     }
 
     Shortcut {
         sequence: "F"
         context: Qt.ApplicationShortcut
-        onActivated: root.apply_best_fit()
+        onActivated: root.toggle_zoom_fit()
+    }
+
+    Shortcut {
+        sequence: "Return"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.toggle_focus_active_pane()
+    }
+
+    Shortcut {
+        sequence: "Enter"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.toggle_focus_active_pane()
+    }
+
+    Shortcut {
+        sequence: "Escape"
+        context: Qt.ApplicationShortcut
+        onActivated: panes_grid.clear_focus()
     }
 
     Shortcut {

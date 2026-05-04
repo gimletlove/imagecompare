@@ -1,6 +1,7 @@
 #include "core/ViewableImageEntry.h"
 
 #include <QFileInfo>
+#include <utility>
 
 namespace {
     QString format_file_size(qint64 bytes) {
@@ -8,19 +9,22 @@ namespace {
         constexpr double megabyte = 1024.0 * 1024.0;
 
         if (bytes >= static_cast<qint64>(megabyte)) {
-            return QStringLiteral("%1 MB").arg(QString::number(static_cast<double>(bytes) / megabyte, 'f', 2));
+            return QStringLiteral("%1 MB").arg(static_cast<double>(bytes) / megabyte, 0, 'f', 2);
         }
-        return QStringLiteral("%1 KB").arg(QString::number(static_cast<double>(bytes) / kilobyte, 'f', 2));
+        if (bytes < static_cast<qint64>(kilobyte)) {
+            return QStringLiteral("%1 B").arg(bytes);
+        }
+        return QStringLiteral("%1 KB").arg(static_cast<double>(bytes) / kilobyte, 0, 'f', 2);
     }
 }  // namespace
 
 ViewableImageEntry ViewableImageEntry::from_source(QUuid entry_id, QUuid image_handle_id, QString path, QSize pixel_size) {
     ViewableImageEntry entry;
     entry.m_kind = EntryKind::Source;
-    entry.m_entry_id = std::move(entry_id);
-    entry.m_image_handle_id = std::move(image_handle_id);
-    entry.m_image_path = path;
+    entry.m_entry_id = entry_id;
+    entry.m_image_handle_id = image_handle_id;
     const QFileInfo file_info(path);
+    entry.m_image_path = std::move(path);
     entry.m_primary_header_label = file_info.fileName();
     const QString resolution = QStringLiteral("%1x%2").arg(pixel_size.width()).arg(pixel_size.height());
     entry.m_secondary_header_label = QStringLiteral("%1 • %2").arg(resolution, format_file_size(file_info.size()));
@@ -32,8 +36,8 @@ ViewableImageEntry ViewableImageEntry::from_derived_heatmap(QUuid entry_id, QUui
                                                             QString secondary_header_label) {
     ViewableImageEntry entry;
     entry.m_kind = EntryKind::Derived;
-    entry.m_entry_id = std::move(entry_id);
-    entry.m_image_handle_id = std::move(image_handle_id);
+    entry.m_entry_id = entry_id;
+    entry.m_image_handle_id = image_handle_id;
     entry.m_image_path = std::move(output_path);
     entry.m_primary_header_label = QStringLiteral("Heatmap");
     entry.m_secondary_header_label =
@@ -54,10 +58,6 @@ QUuid ViewableImageEntry::image_handle_id() const noexcept { return m_image_hand
 
 QString ViewableImageEntry::image_path() const { return m_image_path; }
 
-QString ViewableImageEntry::label() const { return m_primary_header_label; }
-
 QString ViewableImageEntry::primary_header_label() const { return m_primary_header_label; }
 
 QString ViewableImageEntry::secondary_header_label() const { return m_secondary_header_label; }
-
-QString ViewableImageEntry::entry_kind_name() const { return is_source() ? QStringLiteral("source") : QStringLiteral("derived"); }

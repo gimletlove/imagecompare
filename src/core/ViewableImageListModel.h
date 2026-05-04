@@ -11,15 +11,10 @@ class ViewableImageListModel : public QAbstractListModel {
    public:
     enum Role {
         EntryIdRole = Qt::UserRole + 1,
-        ImageHandleIdRole,
         ImagePathRole,
         PrimaryHeaderRole,
         SecondaryHeaderRole,
         IsSourceRole,
-        IsDerivedRole,
-        LabelRole,
-        PixelSizeRole,
-        EntryKindRole,
     };
     Q_ENUM(Role)
 
@@ -31,7 +26,7 @@ class ViewableImageListModel : public QAbstractListModel {
 
     void append_entry(const ViewableImageEntry& entry);
     void remove_entry_at(int index);
-    void clear_entries();
+    void move_entry(int from, int to);
 
    private:
     QVector<ViewableImageEntry> m_entries;

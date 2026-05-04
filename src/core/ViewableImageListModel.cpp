@@ -6,7 +6,7 @@ int ViewableImageListModel::rowCount(const QModelIndex& parent) const {
     if (parent.isValid()) {
         return 0;
     }
-    return m_entries.size();
+    return static_cast<int>(m_entries.size());
 }
 
 QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const {
@@ -18,8 +18,6 @@ QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const 
     switch (role) {
         case EntryIdRole:
             return entry.entry_id();
-        case ImageHandleIdRole:
-            return entry.image_handle_id();
         case ImagePathRole:
             return entry.image_path();
         case PrimaryHeaderRole:
@@ -28,14 +26,6 @@ QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const 
             return entry.secondary_header_label();
         case IsSourceRole:
             return entry.is_source();
-        case IsDerivedRole:
-            return entry.is_derived();
-        case LabelRole:
-            return entry.label();
-        case PixelSizeRole:
-            return entry.pixel_size();
-        case EntryKindRole:
-            return entry.entry_kind_name();
         default:
             return {};
     }
@@ -44,20 +34,15 @@ QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const 
 QHash<int, QByteArray> ViewableImageListModel::roleNames() const {
     return {
         {EntryIdRole, "entryId"},
-        {ImageHandleIdRole, "imageHandleId"},
         {ImagePathRole, "imagePath"},
         {PrimaryHeaderRole, "primaryHeader"},
         {SecondaryHeaderRole, "secondaryHeader"},
         {IsSourceRole, "isSource"},
-        {IsDerivedRole, "isDerived"},
-        {LabelRole, "label"},
-        {PixelSizeRole, "pixelSize"},
-        {EntryKindRole, "entryKind"},
     };
 }
 
 void ViewableImageListModel::append_entry(const ViewableImageEntry& entry) {
-    const int next_row = m_entries.size();
+    const int next_row = static_cast<int>(m_entries.size());
     beginInsertRows(QModelIndex(), next_row, next_row);
     m_entries.push_back(entry);
     endInsertRows();
@@ -72,11 +57,13 @@ void ViewableImageListModel::remove_entry_at(int index) {
     endRemoveRows();
 }
 
-void ViewableImageListModel::clear_entries() {
-    if (m_entries.isEmpty()) {
+void ViewableImageListModel::move_entry(int from, int to) {
+    if (from < 0 || from >= m_entries.size() || to < 0 || to >= m_entries.size() || from == to) {
         return;
     }
-    beginRemoveRows(QModelIndex(), 0, m_entries.size() - 1);
-    m_entries.clear();
-    endRemoveRows();
+
+    const int destination_row = to > from ? to + 1 : to;
+    beginMoveRows(QModelIndex(), from, from, QModelIndex(), destination_row);
+    m_entries.move(from, to);
+    endMoveRows();
 }

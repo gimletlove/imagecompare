@@ -29,15 +29,15 @@ class WorkspaceDocument : public QObject {
     [[nodiscard]] QUuid add_derived_entry(const QUuid& image_handle_id, const QString& output_path, const QSize& pixel_size,
                                           const QString& secondary_header_label = {});
 
-    [[nodiscard]] int entry_count() const noexcept { return m_entries.size(); }
+    [[nodiscard]] int entry_count() const noexcept { return static_cast<int>(m_entries.size()); }
     [[nodiscard]] DisplayMode display_mode() const noexcept { return m_display_mode; }
-    [[nodiscard]] int source_entry_count() const noexcept;
     [[nodiscard]] bool can_build_heatmap() const noexcept;
     [[nodiscard]] ViewableImageEntry entry_at(int index) const;
     [[nodiscard]] ViewableImageListModel* entries_model() noexcept { return &m_entries_model; }
     [[nodiscard]] bool remove_derived_heatmap_entries();
     [[nodiscard]] bool remove_entry_by_id(const QUuid& entry_id);
     [[nodiscard]] bool remove_entry_at(int index);
+    [[nodiscard]] bool move_entry_by_id(const QUuid& entry_id, int direction);
     void set_display_mode(DisplayMode mode);
 
    Q_SIGNALS:

@@ -4,20 +4,19 @@ import QtQuick.Layouts
 
 Item {
     id: root
-    property var workspace
     property string zoom_readout: "100%"
     property bool overlay_mode_active: false
     property bool match_zoom_enabled: false
     property bool can_best_fit_action: false
     property bool can_display_mode_action: false
+    property bool can_heatmap_action: false
     property bool can_overlay_action: false
     property bool can_match_zoom_action: false
     property bool heatmap_in_progress: false
     property string display_mode_toggle_text: "Faithful"
     signal open_requested()
-    signal compare_tools_requested()
-    signal zoom100_requested()
-    signal best_fit_requested()
+    signal heatmap_requested()
+    signal zoom_fit_toggle_requested()
     signal overlay_mode_toggle_requested()
     signal match_zoom_toggle_requested()
     signal display_mode_toggle_requested()
@@ -40,14 +39,13 @@ Item {
         }
 
         ToolButton {
-            text: "Build Heatmap (b)"
-            enabled: !root.heatmap_in_progress
-                && (root.workspace ? (root.workspace.can_build_heatmap && root.workspace.entry_count === 2) : false)
+            text: root.heatmap_in_progress ? "Building..." : "Heatmap (b)"
+            enabled: !root.heatmap_in_progress && root.can_heatmap_action
             property string tool_tip_text: "Build a heatmap of the level of difference from two images"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
             focusPolicy: Qt.NoFocus
-            onClicked: root.compare_tools_requested()
+            onClicked: root.heatmap_requested()
         }
 
         ToolButton {
@@ -61,23 +59,13 @@ Item {
         }
 
         ToolButton {
-            text: root.zoom_readout + " (t)"
+            text: root.zoom_readout + " (f)"
             enabled: root.can_best_fit_action
-            property string tool_tip_text: "Reset zoom to 100 percent"
+            property string tool_tip_text: "Toggle best fit and 100 percent zoom (F)"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
             focusPolicy: Qt.NoFocus
-            onClicked: root.zoom100_requested()
-        }
-
-        ToolButton {
-            text: "Best Fit (f)"
-            enabled: root.can_best_fit_action
-            property string tool_tip_text: "Fit visible image panes to their viewport"
-            ToolTip.visible: hovered
-            ToolTip.text: tool_tip_text
-            focusPolicy: Qt.NoFocus
-            onClicked: root.best_fit_requested()
+            onClicked: root.zoom_fit_toggle_requested()
         }
 
         ToolButton {
