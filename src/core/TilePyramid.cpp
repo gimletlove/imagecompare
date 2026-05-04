@@ -47,7 +47,7 @@ QRect TilePyramid::visible_tile_bounds(int level, const QRectF& image_rect) cons
     return QRect(left, top, (right - left) + 1, (bottom - top) + 1);
 }
 
-int TilePyramid::level_count() const noexcept { return m_level_sizes.size(); }
+int TilePyramid::level_count() const noexcept { return static_cast<int>(m_level_sizes.size()); }
 
 int TilePyramid::tile_size() const noexcept { return m_tile_size; }
 

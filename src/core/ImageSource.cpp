@@ -12,6 +12,9 @@
 #include <vips/vips8>
 
 namespace {
+    constexpr int k_tile_cache_tile_size = 256;
+    constexpr int k_tile_cache_max_tiles = 512;
+
     void ensure_vips_initialized() {
         static std::once_flag init_flag;
         std::call_once(init_flag, []() {
@@ -32,8 +35,19 @@ namespace {
         return qHashMulti(seed, key.normalized_path, key.ignore_color_profile);
     }
 
-    vips::VImage load_image_for_spec(const QString& path, const RenderSpec& spec) {
-        vips::VImage image = vips::VImage::new_from_file(path.toUtf8().constData());
+    vips::VImage add_random_access_tile_cache(const vips::VImage& image) {
+        return image.tilecache(vips::VImage::option()
+                                   ->set("tile_width", k_tile_cache_tile_size)
+                                   ->set("tile_height", k_tile_cache_tile_size)
+                                   ->set("max_tiles", k_tile_cache_max_tiles)
+                                   ->set("threaded", true)
+                                   ->set("persistent", true));
+    }
+
+    vips::VImage load_image_for_spec(const QString& path, const RenderSpec& spec, bool random_access) {
+        vips::VImage image = random_access ? vips::VImage::new_from_file(path.toUtf8().constData(),
+                                                                         vips::VImage::option()->set("access", VIPS_ACCESS_RANDOM))
+                                           : vips::VImage::new_from_file(path.toUtf8().constData());
         image = image.autorot();
         if (!spec.ignore_color_profile) {
             const bool has_embedded_icc_profile = image.get_typeof("icc-profile-data") != 0;
@@ -89,12 +103,13 @@ namespace {
                 break;
             }
             case 3: {
-                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), image.width() * 3, QImage::Format_RGB888);
+                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), static_cast<qsizetype>(image.width()) * 3,
+                               QImage::Format_RGB888);
                 result = wrapped.copy();
                 break;
             }
             case 4: {
-                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), image.width() * 4,
+                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), static_cast<qsizetype>(image.width()) * 4,
                                QImage::Format_RGBA8888);
                 result = wrapped.copy();
                 break;
@@ -148,7 +163,7 @@ namespace {
             }
         }
 
-        vips::VImage loaded_image = load_image_for_spec(cache_key.normalized_path, spec);
+        vips::VImage loaded_image = add_random_access_tile_cache(load_image_for_spec(cache_key.normalized_path, spec, true));
 
         {
             std::lock_guard lock(render_cache_mutex());
@@ -171,7 +186,7 @@ namespace {
     }
 }  // namespace
 
-ImageSource::ImageSource(QString path) : m_path(normalized_path_for_source(path)) {}
+ImageSource::ImageSource(const QString& path) : m_path(normalized_path_for_source(path)) {}
 
 bool ImageSource::supported_image_path(const QString& path) {
     if (path.isEmpty()) {
@@ -187,7 +202,7 @@ bool ImageSource::supported_image_path(const QString& path) {
 
 vips::VImage ImageSource::load_for_render(const QString& path, const RenderSpec& spec) {
     ensure_vips_initialized();
-    return load_image_for_spec(path, spec);
+    return load_image_for_spec(path, spec, false);
 }
 
 const QString& ImageSource::path() const noexcept { return m_path; }
@@ -236,7 +251,7 @@ void ImageSource::ensure_loaded() const {
     }
 
     ensure_vips_initialized();
-    vips::VImage image = vips::VImage::new_from_file(m_path.toUtf8().constData());
+    vips::VImage image = vips::VImage::new_from_file(m_path.toUtf8().constData()).autorot();
 
     m_pixel_size = QSize(image.width(), image.height());
     m_loaded = true;
@@ -244,7 +259,7 @@ void ImageSource::ensure_loaded() const {
 
 QString ImageSource::normalized_path_for_source(const QString& path) {
     const QFileInfo file_info(path);
-    const QString canonical_path = file_info.canonicalFilePath();
+    QString canonical_path = file_info.canonicalFilePath();
     if (!canonical_path.isEmpty()) {
         return canonical_path;
     }

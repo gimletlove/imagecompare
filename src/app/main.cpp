@@ -1,4 +1,5 @@
 #include <QtQml/qqml.h>
+#include <vips/vips.h>
 
 #include <QApplication>
 #include <QIcon>
@@ -9,10 +10,6 @@
 #include "app/ApplicationController.h"
 #include "app/WindowDropFilter.h"
 #include "ui/TiledImageItem.h"
-
-extern "C" {
-    void vips_shutdown(void);
-}
 
 int main(int argc, char* argv[]) {
     QApplication app(argc, argv);

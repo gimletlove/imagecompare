@@ -10,7 +10,6 @@ namespace {
 void ViewState::set_zoom_factor(double value) {
     m_zoom_factor = std::clamp(value, k_min_zoom_factor, k_max_zoom_factor);
     clamp_center_to_image_bounds();
-    m_best_fit_active = false;
 }
 
 void ViewState::center_on(QPointF image_point) {
@@ -28,8 +27,6 @@ void ViewState::set_image_size(QSizeF size) {
     clamp_center_to_image_bounds();
 }
 
-void ViewState::set_best_fit_active(bool active) noexcept { m_best_fit_active = active; }
-
 double ViewState::zoom_factor() const noexcept { return m_zoom_factor; }
 
 QPointF ViewState::image_center() const noexcept { return m_image_center; }
@@ -37,8 +34,6 @@ QPointF ViewState::image_center() const noexcept { return m_image_center; }
 QSizeF ViewState::viewport_size() const noexcept { return m_viewport_size; }
 
 QSizeF ViewState::image_size() const noexcept { return m_image_size; }
-
-bool ViewState::best_fit_active() const noexcept { return m_best_fit_active; }
 
 QPointF ViewState::viewport_center() const noexcept { return QPointF(m_viewport_size.width() / 2.0, m_viewport_size.height() / 2.0); }
 
@@ -52,14 +47,13 @@ void ViewState::pan_by_viewport_delta(const QPointF& viewport_delta) {
     }
 
     center_on(image_center() - viewport_delta / zoom_factor());
-    m_best_fit_active = false;
 }
 
 double ViewState::best_fit_zoom() const noexcept {
     if (m_viewport_size.width() <= 0.0 || m_viewport_size.height() <= 0.0) {
         return 1.0;
     }
-    
+
     if (m_image_size.width() <= 0.0 || m_image_size.height() <= 0.0) {
         return 1.0;
     }

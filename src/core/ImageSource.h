@@ -14,7 +14,7 @@ struct RenderSpec {
 
 class ImageSource {
    public:
-    explicit ImageSource(QString path);
+    explicit ImageSource(const QString& path);
 
     [[nodiscard]] static bool supported_image_path(const QString& path);
     [[nodiscard]] static vips::VImage load_for_render(const QString& path, const RenderSpec& spec);

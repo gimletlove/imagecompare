@@ -3,6 +3,7 @@
 #include <QDateTime>
 #include <QFileInfo>
 #include <QString>
+#include <QtGlobal>
 
 struct SourceIdentity {
     QString canonical_path;
@@ -14,3 +15,7 @@ struct SourceIdentity {
 
     friend bool operator==(const SourceIdentity&, const SourceIdentity&) = default;
 };
+
+Q_ALWAYS_INLINE uint qHash(const SourceIdentity& identity, uint seed = 0) noexcept {
+    return qHashMulti(seed, identity.canonical_path, identity.file_size, identity.modified_at.toMSecsSinceEpoch());
+}
