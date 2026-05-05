@@ -1,6 +1,12 @@
 #include "app/ApplicationController.h"
 
 #include <QClipboard>
+#ifdef IMAGECOMPARE_FLATPAK
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusMessage>
+#include <QDBusUnixFileDescriptor>
+#endif
 #include <QDateTime>
 #include <QDebug>
 #include <QDesktopServices>
@@ -14,8 +20,73 @@
 #include <QString>
 #include <QStringList>
 #include <QUrl>
+#ifdef IMAGECOMPARE_FLATPAK
+#include <QVariantMap>
+#endif
 #include <QVector>
 #include <exception>
+
+#ifdef IMAGECOMPARE_FLATPAK
+#include <sys/types.h>
+#include <sys/xattr.h>
+#endif
+
+namespace {
+#ifdef IMAGECOMPARE_FLATPAK
+    bool running_in_flatpak() { return qEnvironmentVariableIsSet("FLATPAK_ID") || QFileInfo::exists(QStringLiteral("/.flatpak-info")); }
+
+    QString document_portal_host_path(const QString& path) {
+        if (path.isEmpty()) {
+            return {};
+        }
+
+        const QByteArray native_path = QFile::encodeName(path);
+        constexpr const char* k_host_path_attribute = "user.document-portal.host-path";
+        const ssize_t size = getxattr(native_path.constData(), k_host_path_attribute, nullptr, 0);
+        constexpr ssize_t k_max_reasonable_path_size = 64 * 1024;
+        if (size <= 0 || size > k_max_reasonable_path_size) {
+            return {};
+        }
+
+        QByteArray value(size, Qt::Uninitialized);
+        const ssize_t read_size = getxattr(native_path.constData(), k_host_path_attribute, value.data(), value.size());
+        if (read_size <= 0 || read_size > value.size()) {
+            return {};
+        }
+        value.resize(read_size);
+        return QFile::decodeName(value);
+    }
+
+    QString user_visible_path(const QString& path) {
+        if (!running_in_flatpak()) {
+            return path;
+        }
+        const QString host_path = document_portal_host_path(path);
+        return host_path.isEmpty() ? path : host_path;
+    }
+
+    bool open_containing_folder_with_portal(const QString& path) {
+        QFile file(path);
+        if (!file.open(QIODevice::ReadOnly)) {
+            return false;
+        }
+
+        QDBusInterface portal(QStringLiteral("org.freedesktop.portal.Desktop"), QStringLiteral("/org/freedesktop/portal/desktop"),
+                              QStringLiteral("org.freedesktop.portal.OpenURI"), QDBusConnection::sessionBus());
+        if (!portal.isValid()) {
+            return false;
+        }
+
+        const QDBusMessage reply = portal.call(QStringLiteral("OpenDirectory"), QString(),
+                                               QVariant::fromValue(QDBusUnixFileDescriptor(file.handle())), QVariantMap{});
+        if (reply.type() == QDBusMessage::ErrorMessage) {
+            qWarning().noquote() << "Failed to open containing folder through portal:" << reply.errorMessage();
+            return false;
+        }
+        return true;
+    }
+#endif
+}  // namespace
 
 ApplicationController::ApplicationController(QObject* parent)
     : QObject(parent), m_workspace(this), m_comparison_service(m_repository), m_job_queue(m_comparison_service, this) {
@@ -118,7 +189,11 @@ bool ApplicationController::copy_path_to_clipboard(const QString& path) const {
     if (path.isEmpty() || QGuiApplication::clipboard() == nullptr) {
         return false;
     }
+#ifdef IMAGECOMPARE_FLATPAK
+    QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(user_visible_path(path)));
+#else
     QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(path));
+#endif
     return true;
 }
 
@@ -127,6 +202,11 @@ bool ApplicationController::open_containing_folder(const QString& path) const {
     if (path.isEmpty() || file_info.absolutePath().isEmpty()) {
         return false;
     }
+#ifdef IMAGECOMPARE_FLATPAK
+    if (running_in_flatpak() && file_info.exists() && open_containing_folder_with_portal(path)) {
+        return true;
+    }
+#endif
     return QDesktopServices::openUrl(QUrl::fromLocalFile(file_info.absolutePath()));
 }
 

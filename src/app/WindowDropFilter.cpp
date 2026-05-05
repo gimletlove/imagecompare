@@ -1,6 +1,8 @@
 #include "app/WindowDropFilter.h"
 
+#ifdef IMAGECOMPARE_FLATPAK
 #include <KUrlMimeData>
+#endif
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QEvent>
@@ -49,11 +51,15 @@ QList<QUrl> WindowDropFilter::decode_urls(const QMimeData* mime_data) const {
         return {};
     }
 
+#ifdef IMAGECOMPARE_FLATPAK
     QList<QUrl> urls = KUrlMimeData::urlsFromMimeData(mime_data, KUrlMimeData::PreferLocalUrls);
     if (urls.isEmpty()) { // fallback
         urls = mime_data->urls();
     }
     return urls;
+#else
+    return mime_data->urls();
+#endif
 }
 
 QStringList WindowDropFilter::normalize_urls(const QList<QUrl>& urls) const {

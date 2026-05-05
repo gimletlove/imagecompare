@@ -18,6 +18,8 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 add_compile_definitions(QT_NO_KEYWORDS)
 
+option(IMAGECOMPARE_FLATPAK "Enable Flatpak-specific portal integration" OFF)
+
 include(cmake/Dependencies.cmake)
 
 if(QT_KNOWN_POLICY_QTP0004)
@@ -50,7 +52,6 @@ target_include_directories(image_compare_core
 )
 target_link_libraries(image_compare_core
     PUBLIC
-        KF6::CoreAddons
         Qt6::Core
         Qt6::Gui
         Qt6::Quick
@@ -58,6 +59,10 @@ target_link_libraries(image_compare_core
         PkgConfig::VIPS
         PkgConfig::VIPSCPP
 )
+if(IMAGECOMPARE_FLATPAK)
+    target_compile_definitions(image_compare_core PRIVATE IMAGECOMPARE_FLATPAK=1)
+    target_link_libraries(image_compare_core PUBLIC KF6::CoreAddons Qt6::DBus)
+endif()
 
 add_executable(imagecompare
     src/app/main.cpp

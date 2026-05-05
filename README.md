@@ -70,7 +70,6 @@ Image Compare is useful for:
 ## Runtime Requirements
 
 - Qt6 runtime libraries
-- KDE Frameworks 6 CoreAddons runtime libraries
 - libvips runtime libraries
 
 ## Build Requirements
@@ -78,7 +77,6 @@ Image Compare is useful for:
 - C++20 compiler
 - CMake 3.21+
 - Qt6
-- KDE Frameworks 6 CoreAddons
 - libvips and vips-cpp
 
 Check installed dependency versions:
@@ -95,6 +93,15 @@ pkg-config --modversion vips-cpp
 cmake -S . -B build
 cmake --build build
 ```
+
+Enable Flatpak-specific portal integration for Flatpak builds:
+
+```bash
+cmake -S . -B build-flatpak -DIMAGECOMPARE_FLATPAK=ON
+cmake --build build-flatpak
+```
+
+Flatpak builds also require Qt6 DBus and KDE Frameworks 6 CoreAddons.
 
 ## Run
 
