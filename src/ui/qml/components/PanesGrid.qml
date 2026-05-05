@@ -283,7 +283,7 @@ Item {
     function copy_active_path() {
         validate_active_entry();
         const pane = pane_for_entry_id(active_entry_id);
-        return pane && root.controller ? root.controller.copy_path_to_clipboard(pane.image_path_value) : false;
+        return pane && pane.source_pane_value && root.controller ? root.controller.copy_path_to_clipboard(pane.image_path_value) : false;
     }
 
     function export_entry_heatmap(entry_id) {
@@ -372,8 +372,8 @@ Item {
                 clip: true
                 onRemove_requested: entry_id => root.remove_entry(entry_id)
                 onActivate_requested: entry_id => root.activate_entry(entry_id)
-                onCopy_path_requested: path => root.controller && root.controller.copy_path_to_clipboard(path)
-                onOpen_folder_requested: path => root.controller && root.controller.open_containing_folder(path)
+                onCopy_path_requested: path => source_pane_value && root.controller && root.controller.copy_path_to_clipboard(path)
+                onOpen_folder_requested: path => source_pane_value && root.controller && root.controller.open_containing_folder(path)
                 onMove_requested: (entry_id, direction) => root.move_entry(entry_id, direction)
                 onExport_heatmap_requested: entry_id => root.export_entry_heatmap(entry_id)
                 onView_changed: (pane, zoom_factor, image_center) =>

@@ -21,7 +21,7 @@ int TilePyramid::level_for_zoom(double zoom_factor) const {
         return 0;
     }
     const int max_level = static_cast<int>(m_level_sizes.size()) - 1;
-    const int level = qRound(qLn(1.0 / zoom_factor) / qLn(2.0));
+    const int level = qFloor(qLn(1.0 / zoom_factor) / qLn(2.0));
     return std::clamp(level, 0, max_level);
 }
 
@@ -41,8 +41,8 @@ QRect TilePyramid::visible_tile_bounds(int level, const QRectF& image_rect) cons
 
     const int left = clamped_tile_index(qFloor(scaled_rect.left() / m_tile_size), max_tile_x);
     const int top = clamped_tile_index(qFloor(scaled_rect.top() / m_tile_size), max_tile_y);
-    const int right = clamped_tile_index(qFloor((scaled_rect.right()) / m_tile_size), max_tile_x);
-    const int bottom = clamped_tile_index(qFloor((scaled_rect.bottom()) / m_tile_size), max_tile_y);
+    const int right = clamped_tile_index(qCeil(scaled_rect.right() / m_tile_size) - 1, max_tile_x);
+    const int bottom = clamped_tile_index(qCeil(scaled_rect.bottom() / m_tile_size) - 1, max_tile_y);
 
     return QRect(left, top, (right - left) + 1, (bottom - top) + 1);
 }

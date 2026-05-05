@@ -59,15 +59,22 @@ Item {
 
         MenuItem {
             text: "Copy Path (Ctrl+C)"
+            visible: root.source_pane_value
+            height: visible ? implicitHeight : 0
             onTriggered: root.copy_path_requested(root.image_path_value)
         }
 
         MenuItem {
             text: "Open Containing Folder"
+            visible: root.source_pane_value
+            height: visible ? implicitHeight : 0
             onTriggered: root.open_folder_requested(root.image_path_value)
         }
 
-        MenuSeparator {}
+        MenuSeparator {
+            visible: root.source_pane_value
+            height: visible ? implicitHeight : 0
+        }
 
         MenuItem {
             text: "Move Left (Ctrl+Left)"
@@ -83,6 +90,7 @@ Item {
 
         MenuSeparator {
             visible: !root.source_pane_value
+            height: visible ? implicitHeight : 0
         }
 
         MenuItem {

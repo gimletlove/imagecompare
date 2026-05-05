@@ -301,6 +301,7 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
     const QRectF visible_rect = visible_image_rect();
     const double zoom = m_view_state.zoom_factor();
     const QRectF viewport_bounds(0.0, 0.0, width(), height());
+    const bool can_reuse_stale_tile_nodes = !m_texture_cache.empty();
 
     if (!m_preview_image.isNull() && !m_preview_image_rect.isEmpty()) {
         if (root_node->preview_node == nullptr || root_node->preview_generation != m_preview_generation) {
@@ -324,7 +325,7 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
     active_keys.reserve(m_active_tile_indices.size());
 
     for (const QPoint& tile_index : m_active_tile_indices) {
-        const QImage* tile_image = m_texture_cache.tile_ptr(m_image_path, m_display_mode, level, tile_index);
+        const QImage* tile_image = m_texture_cache.tile_ptr(m_display_mode, level, tile_index);
         if (tile_image == nullptr || tile_image->isNull()) {
             continue;
         }
@@ -360,17 +361,19 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
             continue;
         }
 
-        const TileNodeKey current_tile_key{
-            .generation = m_scene_generation,
-            .level = it.key().level,
-            .tile_index = it.key().tile_index,
-        };
-        if (it.key().generation != m_scene_generation && active_keys.contains(current_tile_key)) {
-            QSGSimpleTextureNode* stale_node = it.value();
-            root_node->removeChildNode(stale_node);
-            delete stale_node;
-            it = root_node->nodes_by_key.erase(it);
-            continue;
+        if (it.key().generation != m_scene_generation) {
+            const TileNodeKey current_tile_key{
+                .generation = m_scene_generation,
+                .level = it.key().level,
+                .tile_index = it.key().tile_index,
+            };
+            if (!can_reuse_stale_tile_nodes || active_keys.contains(current_tile_key)) {
+                QSGSimpleTextureNode* stale_node = it.value();
+                root_node->removeChildNode(stale_node);
+                delete stale_node;
+                it = root_node->nodes_by_key.erase(it);
+                continue;
+            }
         }
 
         const QRect fallback_image_rect = tile_image_rect(it.key().level, it.key().tile_index);
@@ -474,15 +477,17 @@ void TiledImageItem::update_requested_tiles(int max_missing_tiles_per_pass) {
         return lhs.distance_to_center < rhs.distance_to_center;
     });
 
-    m_active_tile_indices.reserve(candidates.size());
+    m_active_tile_indices.reserve(static_cast<qsizetype>(visible_bounds.width()) * visible_bounds.height());
     const int render_budget = std::max(1, max_missing_tiles_per_pass);
     int requested_missing_tiles = 0;
     bool visible_missing_tiles = false;
 
     for (const TileCandidate& candidate : candidates) {
-        m_active_tile_indices.push_back(candidate.tile_index);
+        if (candidate.visible) {
+            m_active_tile_indices.push_back(candidate.tile_index);
+        }
 
-        const QImage* tile_image = m_texture_cache.tile_ptr(m_image_path, m_display_mode, level, candidate.tile_index);
+        const QImage* tile_image = m_texture_cache.tile_ptr(m_display_mode, level, candidate.tile_index);
         if (tile_image != nullptr && !tile_image->isNull()) {
             continue;
         }
@@ -655,7 +660,7 @@ void TiledImageItem::request_tile_render(quint64 generation, QString image_path,
 
                     if (!tile_image.isNull()) {
                         item_guard->m_failed_tile_requests.remove(request_key);
-                        item_guard->m_texture_cache.store_tile(image_path, display_mode, level, tile_index, tile_image);
+                        item_guard->m_texture_cache.store_tile(display_mode, level, tile_index, tile_image);
                     } else {
                         if (!error_text.isEmpty()) {
                             qWarning().noquote()

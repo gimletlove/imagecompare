@@ -147,7 +147,7 @@ void ApplicationController::open_images_with_native_dialog() {
     QFileDialog dialog;
     dialog.setWindowTitle(QStringLiteral("Open Images"));
     dialog.setFileMode(QFileDialog::ExistingFiles);
-    dialog.setNameFilter(QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.avif *.jxl *.heic *.heif *.tif *.tiff *.bmp)"));
+    dialog.setNameFilter(QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.avif *.jxl *.heic *.heif *.tif *.tiff *.bmp *.svg)"));
     dialog.setOption(QFileDialog::DontUseNativeDialog, false);
     if (dialog.exec() != QDialog::Accepted) {
         return;

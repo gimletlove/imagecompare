@@ -184,6 +184,25 @@ namespace {
 
         return loaded_image;
     }
+
+    void drop_cached_image_for_path(const QString& normalized_path) {
+        if (normalized_path.isEmpty()) {
+            return;
+        }
+
+        std::lock_guard lock(render_cache_mutex());
+        auto& cache_by_key = render_cache_by_key();
+        for (auto it = cache_by_key.begin(); it != cache_by_key.end();) {
+            if (it.key().normalized_path == normalized_path) {
+                it = cache_by_key.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
+        auto& recency = render_cache_recency();
+        std::erase_if(recency, [&normalized_path](const RenderCacheKey& key) { return key.normalized_path == normalized_path; });
+    }
 }  // namespace
 
 ImageSource::ImageSource(const QString& path) : m_path(normalized_path_for_source(path)) {}
@@ -204,6 +223,8 @@ vips::VImage ImageSource::load_for_render(const QString& path, const RenderSpec&
     ensure_vips_initialized();
     return load_image_for_spec(path, spec, false);
 }
+
+void ImageSource::drop_cached_render_data(const QString& path) { drop_cached_image_for_path(normalized_path_for_source(path)); }
 
 const QString& ImageSource::path() const noexcept { return m_path; }
 

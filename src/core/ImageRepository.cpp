@@ -31,12 +31,14 @@ bool ImageRepository::release(const QUuid& image_handle_id) {
         return false;
     }
 
+    const QString source_path = found.value()->path();
     m_source_by_handle.erase(found);
 
     const SourceIdentity identity = m_identity_by_handle.take(image_handle_id);
     if (identity.is_valid()) {
         m_handle_by_source_identity.remove(identity);
     }
+    ImageSource::drop_cached_render_data(source_path);
     return true;
 }
 
