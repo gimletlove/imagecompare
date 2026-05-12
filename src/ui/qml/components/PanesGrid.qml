@@ -331,6 +331,9 @@ Item {
         if (!can_match_zoom_action && match_zoom_enabled) {
             match_zoom_enabled = false;
             restore_numeric_zoom_now();
+        } else if (can_match_zoom_action && !match_zoom_enabled) {
+            match_zoom_enabled = true;
+            Qt.callLater(reconcile_match_zoom_now);
         }
     }
     onOverlay_mode_enabledChanged: {
@@ -348,7 +351,10 @@ Item {
     Grid {
         id: pane_grid
         anchors.fill: parent
-        anchors.margins: 2
+        anchors.leftMargin: 2
+        anchors.rightMargin: 2
+        anchors.topMargin: 0
+        anchors.bottomMargin: 2
         columns: root.column_count
         spacing: 4
 
