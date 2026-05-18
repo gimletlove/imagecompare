@@ -66,13 +66,19 @@ namespace {
         return image;
     }
 
+    void free_vips_memory(void* memory) { g_free(memory); }
+
     QImage to_q_image(vips::VImage image) {
         if (image.width() <= 0 || image.height() <= 0) {
             return {};
         }
 
-        if (image.interpretation() == VIPS_INTERPRETATION_CMYK) {
-            image = image.colourspace(VIPS_INTERPRETATION_sRGB);
+        if (image.interpretation() != VIPS_INTERPRETATION_sRGB && image.interpretation() != VIPS_INTERPRETATION_B_W) {
+            try {
+                image = image.colourspace(VIPS_INTERPRETATION_sRGB);
+            } catch (const std::exception&) {
+                // Unsupported color layouts fall back to the band handling below.
+            }
         }
         if (image.format() != VIPS_FORMAT_UCHAR) {
             image = image.cast(VIPS_FORMAT_UCHAR);
@@ -86,39 +92,41 @@ namespace {
             image = image.extract_band(0, vips::VImage::option()->set("n", 4));
         }
 
-        size_t byte_count = static_cast<size_t>(image.width()) * static_cast<size_t>(image.height()) * static_cast<size_t>(image.bands());
+        const qsizetype bytes_per_line = static_cast<qsizetype>(image.width()) * image.bands();
+        const size_t expected_byte_count = static_cast<size_t>(bytes_per_line) * static_cast<size_t>(image.height());
+        size_t byte_count = expected_byte_count;
         void* memory = image.write_to_memory(&byte_count);
-        if (memory == nullptr || byte_count == 0) {
+        if (memory == nullptr || byte_count < expected_byte_count) {
             if (memory != nullptr) {
                 g_free(memory);
             }
             return {};
         }
 
-        QImage result;
+        QImage::Format format = QImage::Format_Invalid;
         switch (image.bands()) {
-            case 1: {
-                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), image.width(), QImage::Format_Grayscale8);
-                result = wrapped.copy();
+            case 1:
+                format = QImage::Format_Grayscale8;
                 break;
-            }
-            case 3: {
-                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), static_cast<qsizetype>(image.width()) * 3,
-                               QImage::Format_RGB888);
-                result = wrapped.copy();
+            case 3:
+                format = QImage::Format_RGB888;
                 break;
-            }
-            case 4: {
-                QImage wrapped(static_cast<const uchar*>(memory), image.width(), image.height(), static_cast<qsizetype>(image.width()) * 4,
-                               QImage::Format_RGBA8888);
-                result = wrapped.copy();
+            case 4:
+                format = QImage::Format_RGBA8888;
                 break;
-            }
             default:
                 break;
         }
 
-        g_free(memory);
+        if (format == QImage::Format_Invalid) {
+            g_free(memory);
+            return {};
+        }
+
+        QImage result(static_cast<uchar*>(memory), image.width(), image.height(), bytes_per_line, format, free_vips_memory, memory);
+        if (result.isNull()) {
+            g_free(memory);
+        }
         return result;
     }
 

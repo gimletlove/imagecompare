@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdint>
 #include <exception>
+#include <vector>
 
 #include "core/ImageRepository.h"
 
@@ -56,17 +57,25 @@ namespace {
 
     vips::VImage rgb_for_perceptual_compare(vips::VImage image) {
         image = normalize_uncommon_bands(image);
+        if (image.interpretation() != VIPS_INTERPRETATION_sRGB) {
+            try {
+                image = image.colourspace(VIPS_INTERPRETATION_sRGB);
+                image = normalize_uncommon_bands(image);
+            } catch (const std::exception&) {
+
+            }
+        }
         if (image.bands() == 1) {
             return image.bandjoin(image).bandjoin(image);
         }
         if (image.bands() == 3) {
-            return image;
+            return image.format() == VIPS_FORMAT_UCHAR ? image : image.cast(VIPS_FORMAT_UCHAR);
         }
         if (image.bands() == 4) {
-            const vips::VImage rgb = image.extract_band(0, vips::VImage::option()->set("n", 3)).cast(VIPS_FORMAT_FLOAT);
-            const vips::VImage alpha = image.extract_band(3).cast(VIPS_FORMAT_FLOAT) / 255.0;
-            const vips::VImage background = rgb.new_from_image(k_transparent_background);
-            return ((rgb * alpha) + (background * (1.0 - alpha))).cast(VIPS_FORMAT_UCHAR);
+            return image
+                .flatten(vips::VImage::option()->set(
+                    "background", std::vector<double>{k_transparent_background, k_transparent_background, k_transparent_background}))
+                .cast(VIPS_FORMAT_UCHAR);
         }
 
         // Last-resort compatibility path for unusual source layouts.
@@ -97,7 +106,7 @@ namespace {
     }
 
     vips::VImage heatmap_lut() {
-        static const std::array<std::uint8_t, k_heatmap_lut_size> lut = build_heatmap_lut();
+        static std::array<std::uint8_t, k_heatmap_lut_size> lut = build_heatmap_lut();
         return vips::VImage::new_from_memory_copy(lut.data(), lut.size() * sizeof(std::uint8_t), k_heatmap_lut_width, 1, 3,
                                                   VIPS_FORMAT_UCHAR);
     }
