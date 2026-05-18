@@ -14,6 +14,9 @@ permissions:
 env:
   PACKAGE_VERSION: ${{ inputs.version }}
   LINUX_PACKAGE_NAME: imagecompare-${{ inputs.version }}-linux-x86_64
+  WINDOWS_PACKAGE_NAME: imagecompare-${{ inputs.version }}-windows-x86_64
+  QT_VERSION: '6.8.3'
+  VIPS_VERSION: '8.18.2'
 
 jobs:
   package-linux:
@@ -104,3 +107,158 @@ jobs:
             packages/*.rpm \
             packages/*-source.tar.gz \
             --clobber
+
+  package-windows:
+    name: Windows Artifacts
+    runs-on: windows-2025
+    needs: package-linux
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Install build tools
+        shell: pwsh
+        run: choco install ninja pkgconfiglite -y --no-progress
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          host: windows
+          target: desktop
+          arch: win64_llvm_mingw
+          archives: qtbase qtdeclarative qtsvg qttools
+          tools: tools_llvm_mingw1706,qt.tools.win64_llvm_mingw1706
+          cache: true
+
+      - name: Select LLVM-MinGW toolchain
+        shell: pwsh
+        run: |
+          $clang = Get-ChildItem "$env:IQTA_TOOLS" -Recurse -Filter clang.exe | Select-Object -First 1
+          if (-not $clang) {
+            throw "clang.exe was not found under IQTA_TOOLS=$env:IQTA_TOOLS"
+          }
+          $bin = $clang.Directory.FullName
+          "LLVM_MINGW_BIN=$bin" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          $bin | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Download libvips
+        shell: pwsh
+        run: |
+          $version = $env:VIPS_VERSION
+          $archive = Join-Path $env:RUNNER_TEMP "vips-dev-x64-all-$version.zip"
+          $extractDir = Join-Path $env:RUNNER_TEMP 'vips'
+          $url = "https://github.com/libvips/build-win64-mxe/releases/download/v$version/vips-dev-x64-all-$version.zip"
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $extractDir
+
+          $root = Get-ChildItem $extractDir -Directory | Where-Object { $_.Name -like 'vips-dev-*' } | Select-Object -First 1
+          if (-not $root) {
+            throw "libvips root directory was not found in $extractDir"
+          }
+          $vipsRoot = $root.FullName
+          $prefix = $vipsRoot -replace '\\', '/'
+          Get-ChildItem "$vipsRoot\lib\pkgconfig" -Filter '*.pc' | ForEach-Object {
+            $content = Get-Content $_.FullName
+            $content = $content -replace '^prefix=.*$', "prefix=$prefix"
+            $content = $content -replace '\s-lintl\b', ''
+            $content = $content | Where-Object { $_ -notmatch '^(Requires|Libs)\.private:' }
+            $content | Set-Content $_.FullName -Encoding ascii
+          }
+
+          "VIPS_ROOT=$vipsRoot" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "PKG_CONFIG_PATH=$prefix/lib/pkgconfig" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "$vipsRoot\bin" | Out-File -FilePath $env:GITHUB_PATH -Append -Encoding utf8
+
+      - name: Configure Release build
+        shell: pwsh
+        run: |
+          $clang = Join-Path $env:LLVM_MINGW_BIN 'clang.exe'
+          $clangxx = Join-Path $env:LLVM_MINGW_BIN 'clang++.exe'
+          cmake -S . -B build-windows -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DIMAGECOMPARE_FLATPAK=OFF `
+            "-DCMAKE_C_COMPILER=$clang" `
+            "-DCMAKE_CXX_COMPILER=$clangxx"
+
+      - name: Build
+        shell: pwsh
+        run: cmake --build build-windows
+
+      - name: Stage install tree
+        shell: pwsh
+        run: cmake --install build-windows --prefix "$PWD/stage/windows"
+
+      - name: Build Windows zip
+        shell: pwsh
+        run: |
+          $artifactName = $env:WINDOWS_PACKAGE_NAME
+          $deployDir = Join-Path $PWD "dist\$artifactName"
+          New-Item -ItemType Directory -Force $deployDir | Out-Null
+          New-Item -ItemType Directory -Force packages | Out-Null
+
+          Copy-Item "$PWD\stage\windows\bin\imagecompare.exe" $deployDir
+          Copy-Item "$PWD\LICENSE.txt" $deployDir
+          Copy-Item "$env:VIPS_ROOT\bin\*.dll" $deployDir -Force
+
+          Get-ChildItem "$env:VIPS_ROOT\bin" -Directory -Filter 'vips-modules-*' | ForEach-Object {
+            Copy-Item $_.FullName $deployDir -Recurse -Force
+          }
+
+          $windeployQt = Join-Path $env:QT_ROOT_DIR 'bin\windeployqt.exe'
+          $qtPaths = Join-Path $env:QT_ROOT_DIR 'bin\qtpaths6.exe'
+          & $windeployQt `
+            --qtpaths "$qtPaths" `
+            --no-plugins `
+            --no-translations `
+            --no-opengl-sw `
+            --qmldir "$PWD\src\ui\qml" `
+            "$deployDir\imagecompare.exe"
+          if ($LASTEXITCODE -ne 0) {
+            throw "windeployqt failed with exit code $LASTEXITCODE"
+          }
+
+          $pluginTypes = @(
+            'platforms',
+            'imageformats',
+            'iconengines',
+            'styles',
+            'networkinformation',
+            'tls'
+          )
+          foreach ($pluginType in $pluginTypes) {
+            $pluginDir = Join-Path $env:QT_ROOT_DIR "plugins\$pluginType"
+            if (Test-Path $pluginDir) {
+              Copy-Item $pluginDir $deployDir -Recurse -Force
+            }
+          }
+          if (-not (Test-Path "$deployDir\platforms\qwindows.dll")) {
+            throw 'Missing Qt Windows platform plugin after deployment'
+          }
+
+          if (-not (Test-Path "$deployDir\libglib-2.0-0.dll")) {
+            throw 'Missing libglib-2.0-0.dll after libvips deployment'
+          }
+
+          Get-ChildItem $deployDir -Recurse -Filter '*.pdb' | Remove-Item -Force
+          Compress-Archive -Path $deployDir -DestinationPath "packages\$artifactName.zip" -Force
+
+      - name: Upload Windows package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.WINDOWS_PACKAGE_NAME }}
+          path: packages/*.zip
+          if-no-files-found: error
+
+      - name: Upload Windows release asset
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $releaseTag = $env:PACKAGE_VERSION
+          if (-not $releaseTag.StartsWith('v')) {
+            $releaseTag = "v$releaseTag"
+          }
+          $assets = Get-ChildItem packages/*.zip | ForEach-Object { $_.FullName }
+          gh release upload "$releaseTag" $assets --clobber

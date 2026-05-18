@@ -38,7 +38,7 @@
           <li>Enable match zoom by default when comparing images with different resolutions</li>
           <li>Tighten gaps for a more compact comparison workspace</li>
           <li>Improve libvips image conversion paths for display and heatmap generation</li>
-          <li>Add DEB and RPM release builds</li>
+          <li>Add DEB, RPM, and Windows release builds</li>
         </ul>
       </description>
     </release>

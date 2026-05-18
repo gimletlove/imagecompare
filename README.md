@@ -1,4 +1,4 @@
-# Image Compare - Linux Image Comparison & Visual Diff Tool
+# Image Compare - Image Comparison & Visual Diff Tool for Linux and Windows
 
 [![GitHub Release](https://img.shields.io/github/v/release/gimletlove/imagecompare?label=release)](https://github.com/gimletlove/imagecompare/releases)
 [![Flathub](https://img.shields.io/flathub/v/io.github.gimletlove.imagecompare?label=Flathub)](https://flathub.org/apps/details/io.github.gimletlove.imagecompare)
@@ -29,7 +29,7 @@ Use it to compare screenshots, rendered images, exports, design revisions, befor
 
 ## Install
 
-Linux release builds are available from GitHub Releases.
+Linux release builds and Windows portable zip packages are available from GitHub Releases.
 
 ### GitHub Releases
 
@@ -40,6 +40,7 @@ Available release artifacts include:
 - Linux DEB package for Debian and Ubuntu-based distributions
 - Linux RPM package for Fedora and RPM-based distributions
 - Linux install-tree zip
+- Windows x86_64 portable zip
 - Source tarball
 
 ### Flathub
@@ -57,6 +58,12 @@ flatpak install flathub io.github.gimletlove.imagecompare
 ```bash
 yay -S imagecompare-bin
 ```
+
+### Windows
+
+Download `imagecompare-<version>-windows-x86_64.zip` from GitHub Releases, extract it, and run `imagecompare.exe`.
+
+The Windows build is distributed as a portable zip with its runtime dependencies bundled.
 
 ## How To Use
 
@@ -89,7 +96,7 @@ Packaged release builds include or declare the runtime dependencies they need. B
 
 ## Build Requirements
 
-Local source builds are intended for Linux.
+Local source builds are intended for Linux. Windows packages are produced by the GitHub Actions release workflow.
 
 - C++20 compiler
 - CMake 3.21+
