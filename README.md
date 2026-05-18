@@ -1,17 +1,17 @@
-# Image Compare — Linux Image Comparison & Visual Diff Tool
+# Image Compare - Linux Image Comparison & Visual Diff Tool
 
 [![GitHub Release](https://img.shields.io/github/v/release/gimletlove/imagecompare?label=release)](https://github.com/gimletlove/imagecompare/releases)
 [![Flathub](https://img.shields.io/flathub/v/io.github.gimletlove.imagecompare?label=Flathub)](https://flathub.org/apps/details/io.github.gimletlove.imagecompare)
 [![AUR](https://img.shields.io/aur/version/imagecompare-bin?label=AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
 
-**Image Compare** is a Linux desktop app for comparing two or more images side by side, in a stacked view, or with perceptual heatmap differences. It supports synchronized zoom and pan, grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips.
+**Image Compare** is a desktop image comparison and visual diff tool for comparing two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. It supports synchronized zoom and pan, grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips.
 
 Use it to compare screenshots, rendered images, exports, design revisions, before/after edits, and subtle visual differences between image versions.
 
 ## Screenshots
 
-![Image Compare Linux app showing side-by-side image comparison and heatmap differences](./image-compare-screenshot.png)
+![Image Compare app showing side-by-side image comparison and heatmap differences](./image-compare-screenshot.png)
 
 ## Features
 
@@ -28,6 +28,19 @@ Use it to compare screenshots, rendered images, exports, design revisions, befor
 - Load, zoom, and pan large images efficiently
 
 ## Install
+
+Linux release builds are available from GitHub Releases.
+
+### GitHub Releases
+
+Download release builds from the [GitHub Releases page](https://github.com/gimletlove/imagecompare/releases).
+
+Available release artifacts include:
+
+- Linux DEB package for Debian and Ubuntu-based distributions
+- Linux RPM package for Fedora and RPM-based distributions
+- Linux install-tree zip
+- Source tarball
 
 ### Flathub
 
@@ -69,10 +82,14 @@ Image Compare is useful for:
 
 ## Runtime Requirements
 
+Packaged release builds include or declare the runtime dependencies they need. Building or running from source requires:
+
 - Qt6 runtime libraries
 - libvips runtime libraries
 
 ## Build Requirements
+
+Local source builds are intended for Linux.
 
 - C++20 compiler
 - CMake 3.21+
@@ -113,5 +130,6 @@ Open the app:
 
 ## Project Links
 
+- GitHub Releases: https://github.com/gimletlove/imagecompare/releases
 - Flathub: https://flathub.org/apps/details/io.github.gimletlove.imagecompare
 - Arch Linux AUR: https://aur.archlinux.org/packages/imagecompare-bin

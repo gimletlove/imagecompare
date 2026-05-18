@@ -8,34 +8,33 @@ on:
         required: true
         type: string
 
+permissions:
+  contents: write
+
+env:
+  PACKAGE_VERSION: ${{ inputs.version }}
+  LINUX_PACKAGE_NAME: imagecompare-${{ inputs.version }}-linux-x86_64
+
 jobs:
   package-linux:
     name: Linux Artifacts
     runs-on: ubuntu-24.04
-    container:
-      image: ubuntu:25.04
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v5
 
-      - name: Compute artifact label
-        id: meta
-        shell: bash
-        run: |
-          version='${{ inputs.version }}'
-          artifact_name="imagecompare-linux-${version}"
-          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
-
       - name: Install build dependencies
         run: |
-          apt-get update
-          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y \
             build-essential \
             cmake \
-            libkf6coreaddons-dev \
+            dpkg-dev \
             ninja-build \
             pkg-config \
+            rpm \
+            zip \
             qt6-base-dev \
             qt6-base-dev-tools \
             qt6-declarative-dev \
@@ -50,9 +49,58 @@ jobs:
       - name: Stage install tree
         run: cmake --install build --prefix "$PWD/stage/linux"
 
+      - name: Archive Linux install tree
+        run: |
+          mkdir -p packages
+          (cd stage && zip -r "../packages/${LINUX_PACKAGE_NAME}.zip" linux)
+
+      - name: Archive source tree
+        run: git archive --format=tar.gz --prefix="imagecompare-${PACKAGE_VERSION}/" --output="packages/imagecompare-${PACKAGE_VERSION}-source.tar.gz" HEAD
+
+      - name: Build DEB and RPM packages
+        run: cpack --config build/CPackConfig.cmake -B packages
+
+      - name: Rename distro packages
+        run: |
+          mv packages/*.deb "packages/imagecompare-${PACKAGE_VERSION}-linux-amd64.deb"
+          mv packages/*.rpm "packages/imagecompare-${PACKAGE_VERSION}-linux-x86_64.rpm"
+
       - name: Upload Linux bundle
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: ${{ steps.meta.outputs.artifact_name }}
+          name: ${{ env.LINUX_PACKAGE_NAME }}
           path: stage/linux
           if-no-files-found: error
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ env.LINUX_PACKAGE_NAME }}-packages
+          path: |
+            packages/*.zip
+            packages/*.deb
+            packages/*.rpm
+            packages/*-source.tar.gz
+          if-no-files-found: error
+
+      - name: Create or update draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="${PACKAGE_VERSION}"
+          if [[ "$tag" != v* ]]; then
+            tag="v${tag}"
+          fi
+          title="Image Compare ${PACKAGE_VERSION}"
+          notes="Draft release for Image Compare ${PACKAGE_VERSION}."
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release edit "$tag" --draft --title "$title" --notes "$notes"
+          else
+            gh release create "$tag" --draft --title "$title" --notes "$notes" --target "$GITHUB_SHA"
+          fi
+          gh release upload "$tag" \
+            packages/*.zip \
+            packages/*.deb \
+            packages/*.rpm \
+            packages/*-source.tar.gz \
+            --clobber

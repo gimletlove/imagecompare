@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(image_compare VERSION 1.1.2 LANGUAGES CXX)
+project(image_compare VERSION 1.1.3 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -115,11 +115,6 @@ target_link_libraries(imagecompare
         Qt6::QuickControls2
 )
 
-if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(x86_64|AMD64)$" AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    target_compile_options(image_compare_core PRIVATE -mno-direct-extern-access)
-    target_compile_options(imagecompare PRIVATE -mno-direct-extern-access)
-endif()
-
 install(TARGETS imagecompare
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
@@ -134,4 +129,29 @@ if(UNIX AND NOT APPLE)
         DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps
         RENAME io.github.gimletlove.imagecompare.svg
     )
+    install(FILES LICENSE.txt
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/imagecompare
+    )
 endif()
+
+set(CPACK_PACKAGE_NAME "imagecompare")
+set(CPACK_PACKAGE_VENDOR "gimletlove")
+set(CPACK_PACKAGE_CONTACT "gimletlove <gimletlove@users.noreply.github.com>")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/gimletlove/imagecompare")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Image comparison and visual diff tool")
+set(CPACK_PACKAGE_DESCRIPTION
+    "Image Compare lets you inspect two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. It supports synchronized zoom and pan, grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips."
+)
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
+set(CPACK_GENERATOR "DEB;RPM")
+set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "qml6-module-qtqml-workerscript, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window"
+)
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
+set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
+set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
+include(CPack)
