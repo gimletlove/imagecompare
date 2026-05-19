@@ -67,6 +67,9 @@ endif()
 add_executable(imagecompare
     src/app/main.cpp
 )
+if(WIN32)
+    set_target_properties(imagecompare PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
 set(qml_component_files
     src/ui/qml/components/AppToolbar.qml
     src/ui/qml/components/ComparisonPaneItem.qml
