@@ -244,11 +244,11 @@ jobs:
           Get-ChildItem $deployDir -Recurse -Filter '*.pdb' | Remove-Item -Force
           Compress-Archive -Path $deployDir -DestinationPath "packages\$artifactName.zip" -Force
 
-      - name: Upload Windows package
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v7
         with:
           name: ${{ env.WINDOWS_PACKAGE_NAME }}
-          path: packages/*.zip
+          path: dist/${{ env.WINDOWS_PACKAGE_NAME }}
           if-no-files-found: error
 
       - name: Upload Windows release asset
