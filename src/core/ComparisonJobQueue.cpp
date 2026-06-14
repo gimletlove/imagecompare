@@ -6,12 +6,13 @@
 #include <QMetaType>
 #include <QPointer>
 #include <QRunnable>
+#include <QScopeGuard>
 #include <QThreadPool>
 #include <exception>
 
 #include "core/ComparisonService.h"
 
-ComparisonJobQueue::ComparisonJobQueue(ComparisonService& service, QObject* parent) : QObject(parent), m_service(service) {
+ComparisonJobQueue::ComparisonJobQueue(ImageRepository& repository, QObject* parent) : QObject(parent), m_repository(repository) {
     qRegisterMetaType<ComparisonResult>("ComparisonResult");
 }
 
@@ -21,13 +22,11 @@ QUuid ComparisonJobQueue::enqueue(const ComparisonRequest& request) {
     const QUuid job_id = QUuid::createUuid();
     QPointer<ComparisonJobQueue> queue_guard(this);
 
-    auto task = QRunnable::create([queue_guard, &service = m_service, job_id, request]() {
-        struct VipsThreadGuard {
-            ~VipsThreadGuard() { vips_thread_shutdown(); }
-        } vips_thread_guard;
+    auto task = QRunnable::create([queue_guard, &repository = m_repository, job_id, request]() {
+        const auto vips_thread_guard = qScopeGuard([] { vips_thread_shutdown(); });
 
         try {
-            const ComparisonResult result = service.run(request);
+            const ComparisonResult result = run_comparison(repository, request);
             if (queue_guard == nullptr) {
                 return;
             }

@@ -5,7 +5,7 @@
 WorkspaceDocument::WorkspaceDocument(QObject* parent) : QObject(parent), m_entries_model(this) {}
 
 QUuid WorkspaceDocument::add_source_entry(const QUuid& image_handle_id, const QString& path, const QSize& pixel_size) {
-    if (m_entries.size() >= k_max_entries) {
+    if (entry_count() >= k_max_entries) {
         return {};
     }
 
@@ -13,7 +13,6 @@ QUuid WorkspaceDocument::add_source_entry(const QUuid& image_handle_id, const QS
 
     const QUuid entry_id = QUuid::createUuid();
     const ViewableImageEntry entry = ViewableImageEntry::from_source(entry_id, image_handle_id, path, pixel_size);
-    m_entries.push_back(entry);
     m_entries_model.append_entry(entry);
     Q_EMIT entry_count_changed();
     if (previous_can_build_heatmap != can_build_heatmap()) {
@@ -27,15 +26,14 @@ QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const Q
     const bool previous_can_build_heatmap = can_build_heatmap();
     const int previous_entry_count = entry_count();
 
-    for (int index = static_cast<int>(m_entries.size()) - 1; index >= 0; --index) {
-        if (!m_entries[index].is_derived()) {
+    for (int index = entry_count() - 1; index >= 0; --index) {
+        if (!m_entries_model.entry_at(index).is_derived()) {
             continue;
         }
-        m_entries.removeAt(index);
         m_entries_model.remove_entry_at(index);
     }
 
-    if (m_entries.size() >= k_max_entries) {
+    if (entry_count() >= k_max_entries) {
         if (previous_entry_count != entry_count()) {
             Q_EMIT entry_count_changed();
         }
@@ -48,7 +46,6 @@ QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const Q
     const QUuid entry_id = QUuid::createUuid();
     const ViewableImageEntry entry =
         ViewableImageEntry::from_derived_heatmap(entry_id, image_handle_id, output_path, pixel_size, secondary_header_label);
-    m_entries.push_back(entry);
     m_entries_model.append_entry(entry);
     if (previous_entry_count != entry_count()) {
         Q_EMIT entry_count_changed();
@@ -59,16 +56,11 @@ QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const Q
     return entry_id;
 }
 
-ViewableImageEntry WorkspaceDocument::entry_at(int index) const {
-    if (index < 0 || index >= m_entries.size()) {
-        return {};
-    }
-    return m_entries[index];
-}
+ViewableImageEntry WorkspaceDocument::entry_at(int index) const { return m_entries_model.entry_at(index); }
 
 bool WorkspaceDocument::remove_entry_by_id(const QUuid& entry_id) {
-    for (int index = 0; index < m_entries.size(); ++index) {
-        if (m_entries[index].entry_id() == entry_id) {
+    for (int index = 0; index < entry_count(); ++index) {
+        if (m_entries_model.entry_at(index).entry_id() == entry_id) {
             return remove_entry_at(index);
         }
     }
@@ -76,13 +68,12 @@ bool WorkspaceDocument::remove_entry_by_id(const QUuid& entry_id) {
 }
 
 bool WorkspaceDocument::remove_entry_at(int index) {
-    if (index < 0 || index >= m_entries.size()) {
+    if (index < 0 || index >= entry_count()) {
         return false;
     }
 
     const bool previous_can_build_heatmap = can_build_heatmap();
 
-    m_entries.removeAt(index);
     m_entries_model.remove_entry_at(index);
     Q_EMIT entry_count_changed();
     if (previous_can_build_heatmap != can_build_heatmap()) {
@@ -95,11 +86,10 @@ bool WorkspaceDocument::remove_derived_heatmap_entries() {
     const bool previous_can_build_heatmap = can_build_heatmap();
     const int previous_entry_count = entry_count();
 
-    for (int index = static_cast<int>(m_entries.size()) - 1; index >= 0; --index) {
-        if (!m_entries[index].is_derived()) {
+    for (int index = entry_count() - 1; index >= 0; --index) {
+        if (!m_entries_model.entry_at(index).is_derived()) {
             continue;
         }
-        m_entries.removeAt(index);
         m_entries_model.remove_entry_at(index);
     }
 
@@ -120,8 +110,8 @@ bool WorkspaceDocument::move_entry_by_id(const QUuid& entry_id, int direction) {
     }
 
     int from = -1;
-    for (int index = 0; index < m_entries.size(); ++index) {
-        if (m_entries[index].entry_id() == entry_id) {
+    for (int index = 0; index < entry_count(); ++index) {
+        if (m_entries_model.entry_at(index).entry_id() == entry_id) {
             from = index;
             break;
         }
@@ -130,14 +120,13 @@ bool WorkspaceDocument::move_entry_by_id(const QUuid& entry_id, int direction) {
         return false;
     }
 
-    const int last_index = static_cast<int>(m_entries.size()) - 1;
+    const int last_index = entry_count() - 1;
     const int to = std::clamp(from + (direction < 0 ? -1 : 1), 0, last_index);
     if (from == to) {
         return false;
     }
 
     m_entries_model.move_entry(from, to);
-    m_entries.move(from, to);
     return true;
 }
 
@@ -152,7 +141,8 @@ void WorkspaceDocument::set_display_mode(DisplayMode mode) {
 bool WorkspaceDocument::can_build_heatmap() const noexcept {
     int source_count = 0;
     QSize first_size;
-    for (const ViewableImageEntry& entry : m_entries) {
+    for (int index = 0; index < entry_count(); ++index) {
+        const ViewableImageEntry entry = m_entries_model.entry_at(index);
         if (entry.is_derived()) {
             return false;
         }

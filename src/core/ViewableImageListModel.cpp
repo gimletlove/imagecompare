@@ -6,7 +6,7 @@ int ViewableImageListModel::rowCount(const QModelIndex& parent) const {
     if (parent.isValid()) {
         return 0;
     }
-    return static_cast<int>(m_entries.size());
+    return entry_count();
 }
 
 QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const {
@@ -39,6 +39,13 @@ QHash<int, QByteArray> ViewableImageListModel::roleNames() const {
         {SecondaryHeaderRole, "secondaryHeader"},
         {IsSourceRole, "isSource"},
     };
+}
+
+ViewableImageEntry ViewableImageListModel::entry_at(int index) const {
+    if (index < 0 || index >= m_entries.size()) {
+        return {};
+    }
+    return m_entries[index];
 }
 
 void ViewableImageListModel::append_entry(const ViewableImageEntry& entry) {

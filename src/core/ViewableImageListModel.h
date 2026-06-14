@@ -23,6 +23,8 @@ class ViewableImageListModel : public QAbstractListModel {
     [[nodiscard]] int rowCount(const QModelIndex& parent = QModelIndex()) const override;
     [[nodiscard]] QVariant data(const QModelIndex& index, int role = Qt::DisplayRole) const override;
     [[nodiscard]] QHash<int, QByteArray> roleNames() const override;
+    [[nodiscard]] int entry_count() const noexcept { return static_cast<int>(m_entries.size()); }
+    [[nodiscard]] ViewableImageEntry entry_at(int index) const;
 
     void append_entry(const ViewableImageEntry& entry);
     void remove_entry_at(int index);

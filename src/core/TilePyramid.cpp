@@ -3,12 +3,12 @@
 #include <QtMath>
 #include <algorithm>
 
-TilePyramid::TilePyramid(QSize base_size, int tile_size) : m_base_size(base_size), m_tile_size(std::max(1, tile_size)) {
-    if (!m_base_size.isValid()) {
+TilePyramid::TilePyramid(QSize base_size, int tile_size) : m_tile_size(std::max(1, tile_size)) {
+    if (!base_size.isValid()) {
         return;
     }
 
-    QSize level_size = m_base_size;
+    QSize level_size = base_size;
     m_level_sizes.push_back(level_size);
     while (level_size.width() > 1 || level_size.height() > 1) {
         level_size = QSize(std::max(1, level_size.width() / 2), std::max(1, level_size.height() / 2));

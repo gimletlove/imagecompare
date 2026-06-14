@@ -4,7 +4,6 @@
 #include <QSize>
 #include <QString>
 #include <QUuid>
-#include <QVector>
 
 #include "core/ViewableImageEntry.h"
 #include "core/ViewableImageListModel.h"
@@ -29,7 +28,7 @@ class WorkspaceDocument : public QObject {
     [[nodiscard]] QUuid add_derived_entry(const QUuid& image_handle_id, const QString& output_path, const QSize& pixel_size,
                                           const QString& secondary_header_label = {});
 
-    [[nodiscard]] int entry_count() const noexcept { return static_cast<int>(m_entries.size()); }
+    [[nodiscard]] int entry_count() const noexcept { return m_entries_model.entry_count(); }
     [[nodiscard]] DisplayMode display_mode() const noexcept { return m_display_mode; }
     [[nodiscard]] bool can_build_heatmap() const noexcept;
     [[nodiscard]] ViewableImageEntry entry_at(int index) const;
@@ -48,7 +47,6 @@ class WorkspaceDocument : public QObject {
    private:
     static constexpr int k_max_entries = 10;
 
-    QVector<ViewableImageEntry> m_entries;
     ViewableImageListModel m_entries_model;
     DisplayMode m_display_mode = DisplayMode::Faithful;
 };

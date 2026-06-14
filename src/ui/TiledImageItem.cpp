@@ -10,6 +10,7 @@
 #include <QRunnable>
 #include <QSGNode>
 #include <QSGSimpleTextureNode>
+#include <QScopeGuard>
 #include <QSet>
 #include <QThread>
 #include <QThreadPool>
@@ -40,6 +41,14 @@ namespace {
 
     uint qHash(const TileNodeKey& key, uint seed = 0) noexcept {
         return qHashMulti(seed, key.generation, key.level, key.tile_index.x(), key.tile_index.y());
+    }
+
+    TileTextureKey tile_texture_key(int display_mode, int level, const QPoint& tile_index) {
+        return {
+            .display_mode = display_mode,
+            .level = level,
+            .tile_index = tile_index,
+        };
     }
 
     struct TileCandidate {
@@ -107,16 +116,14 @@ namespace {
                       image_rect.width() * zoom, image_rect.height() * zoom);
     }
 
-    bool configure_tile_render_thread_pool(QThreadPool& pool) {
-        const int ideal_threads = std::max(1, QThread::idealThreadCount());
-        pool.setMaxThreadCount(std::max(1, ideal_threads / 2));
-        pool.setExpiryTimeout(10'000);
-        return true;
-    }
-
     QThreadPool& tile_render_thread_pool() {
         static QThreadPool pool;
-        static const bool configured = configure_tile_render_thread_pool(pool);
+        static const int configured = [] {
+            const int ideal_threads = std::max(1, QThread::idealThreadCount());
+            pool.setMaxThreadCount(std::max(1, ideal_threads / 2));
+            pool.setExpiryTimeout(10'000);
+            return 0;
+        }();
         Q_UNUSED(configured);
         return pool;
     }
@@ -301,7 +308,7 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
     const QRectF visible_rect = visible_image_rect();
     const double zoom = m_view_state.zoom_factor();
     const QRectF viewport_bounds(0.0, 0.0, width(), height());
-    const bool can_reuse_stale_tile_nodes = !m_texture_cache.empty();
+    const bool can_reuse_stale_tile_nodes = !m_texture_cache.isEmpty();
 
     if (!m_preview_image.isNull() && !m_preview_image_rect.isEmpty()) {
         if (root_node->preview_node == nullptr || root_node->preview_generation != m_preview_generation) {
@@ -325,8 +332,8 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
     active_keys.reserve(m_active_tile_indices.size());
 
     for (const QPoint& tile_index : m_active_tile_indices) {
-        const QImage* tile_image = m_texture_cache.tile_ptr(m_display_mode, level, tile_index);
-        if (tile_image == nullptr || tile_image->isNull()) {
+        const auto tile_image = m_texture_cache.constFind(tile_texture_key(m_display_mode, level, tile_index));
+        if (tile_image == m_texture_cache.cend() || tile_image->isNull()) {
             continue;
         }
 
@@ -341,7 +348,7 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
         QSGSimpleTextureNode* texture_node = nullptr;
         auto existing = root_node->nodes_by_key.find(key);
         if (existing == root_node->nodes_by_key.end()) {
-            auto* new_node = create_texture_node(window(), *tile_image);
+            auto* new_node = create_texture_node(window(), tile_image.value());
             if (new_node == nullptr) {
                 continue;
             }
@@ -428,7 +435,7 @@ void TiledImageItem::update_requested_tiles(int max_missing_tiles_per_pass) {
         return;
     }
 
-    const RenderSpec spec = current_render_spec();
+    const RenderSpec spec{.ignore_color_profile = m_display_mode == static_cast<int>(DisplayMode::StrictRaw)};
     const bool current_preview_ready = !m_preview_image.isNull() && m_preview_generation == m_scene_generation;
     const bool current_preview_failed = m_failed_preview_generation == m_scene_generation;
     if (!current_preview_ready && !current_preview_failed && m_pending_preview_generation == 0) {
@@ -487,8 +494,8 @@ void TiledImageItem::update_requested_tiles(int max_missing_tiles_per_pass) {
             m_active_tile_indices.push_back(candidate.tile_index);
         }
 
-        const QImage* tile_image = m_texture_cache.tile_ptr(m_display_mode, level, candidate.tile_index);
-        if (tile_image != nullptr && !tile_image->isNull()) {
+        const auto tile_image = m_texture_cache.constFind(tile_texture_key(m_display_mode, level, candidate.tile_index));
+        if (tile_image != m_texture_cache.cend() && !tile_image->isNull()) {
             continue;
         }
 
@@ -554,15 +561,6 @@ void TiledImageItem::mouseReleaseEvent(QMouseEvent* event) {
     QQuickItem::mouseReleaseEvent(event);
 }
 
-RenderSpec TiledImageItem::current_render_spec() const noexcept {
-    if (m_display_mode == static_cast<int>(DisplayMode::StrictRaw)) {
-        return {
-            .ignore_color_profile = true,
-        };
-    }
-    return {};
-}
-
 QRectF TiledImageItem::visible_image_rect() const {
     const double zoom = std::max(0.01, m_view_state.zoom_factor());
     const QSizeF viewport = m_view_state.viewport_size();
@@ -624,9 +622,7 @@ void TiledImageItem::request_tile_render(quint64 generation, QString image_path,
 
     auto task = QRunnable::create(
         [item_guard, generation, image_path = std::move(image_path), display_mode, spec, level, tile_index, image_rect, request_key]() {
-            struct VipsThreadGuard {
-                ~VipsThreadGuard() { vips_thread_shutdown(); }
-            } vips_thread_guard;
+            const auto vips_thread_guard = qScopeGuard([] { vips_thread_shutdown(); });
 
             QImage tile_image;
             QString error_text;
@@ -660,7 +656,7 @@ void TiledImageItem::request_tile_render(quint64 generation, QString image_path,
 
                     if (!tile_image.isNull()) {
                         item_guard->m_failed_tile_requests.remove(request_key);
-                        item_guard->m_texture_cache.store_tile(display_mode, level, tile_index, tile_image);
+                        item_guard->m_texture_cache.insert(tile_texture_key(display_mode, level, tile_index), tile_image);
                     } else {
                         if (!error_text.isEmpty()) {
                             qWarning().noquote()
@@ -682,9 +678,7 @@ void TiledImageItem::request_preview_render(quint64 generation, QString image_pa
 
     auto task =
         QRunnable::create([item_guard, generation, image_path = std::move(image_path), display_mode, spec, image_rect, output_size]() {
-            struct VipsThreadGuard {
-                ~VipsThreadGuard() { vips_thread_shutdown(); }
-            } vips_thread_guard;
+            const auto vips_thread_guard = qScopeGuard([] { vips_thread_shutdown(); });
 
             QImage preview_image;
             QString error_text;

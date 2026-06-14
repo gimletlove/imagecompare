@@ -38,10 +38,6 @@ namespace {
         return result;
     }
 
-    bool dimensions_match(const vips::VImage& first, const vips::VImage& second) {
-        return first.width() == second.width() && first.height() == second.height();
-    }
-
     vips::VImage normalize_uncommon_bands(vips::VImage image) {
         const int band_count = image.bands();
         if (band_count == 2) {
@@ -62,7 +58,6 @@ namespace {
                 image = image.colourspace(VIPS_INTERPRETATION_sRGB);
                 image = normalize_uncommon_bands(image);
             } catch (const std::exception&) {
-
             }
         }
         if (image.bands() == 1) {
@@ -73,8 +68,8 @@ namespace {
         }
         if (image.bands() == 4) {
             return image
-                .flatten(vips::VImage::option()->set(
-                    "background", std::vector<double>{k_transparent_background, k_transparent_background, k_transparent_background}))
+                .flatten(vips::VImage::option()->set("background", std::vector<double>{k_transparent_background, k_transparent_background,
+                                                                                       k_transparent_background}))
                 .cast(VIPS_FORMAT_UCHAR);
         }
 
@@ -132,23 +127,20 @@ namespace {
     }
 }  // namespace
 
-ComparisonService::ComparisonService(ImageRepository& repository) : m_repository(repository) {}
-
-ComparisonResult ComparisonService::run(const ComparisonRequest& request) const {
+ComparisonResult run_comparison(ImageRepository& repository, const ComparisonRequest& request) {
     if (request.first_image_handle_id.isNull() || request.second_image_handle_id.isNull()) {
         return fail(QStringLiteral("comparison request has null image handles"));
     }
 
     try {
-        const auto first_source = m_repository.image(request.first_image_handle_id);
-        const auto second_source = m_repository.image(request.second_image_handle_id);
+        const auto first_source = repository.image(request.first_image_handle_id);
+        const auto second_source = repository.image(request.second_image_handle_id);
 
-        const RenderSpec first_spec = first_source->render_spec(request.display_mode);
-        const RenderSpec second_spec = second_source->render_spec(request.display_mode);
-        vips::VImage first = ImageSource::load_for_render(first_source->path(), first_spec);
-        vips::VImage second = ImageSource::load_for_render(second_source->path(), second_spec);
+        const RenderSpec spec{.ignore_color_profile = request.display_mode == DisplayMode::StrictRaw};
+        vips::VImage first = ImageSource::load_for_render(first_source->path(), spec);
+        vips::VImage second = ImageSource::load_for_render(second_source->path(), spec);
 
-        if (!dimensions_match(first, second)) {
+        if (first.width() != second.width() || first.height() != second.height()) {
             return fail(QStringLiteral("selected image dimensions differ"));
         }
         first = rgb_for_perceptual_compare(first);

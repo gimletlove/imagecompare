@@ -6,7 +6,6 @@
 #include <QStringList>
 
 #include "core/ComparisonJobQueue.h"
-#include "core/ComparisonService.h"
 #include "core/ImageRepository.h"
 #include "core/WorkspaceDocument.h"
 
@@ -33,7 +32,7 @@ class ApplicationController : public QObject {
 
     [[nodiscard]] WorkspaceDocument* workspace() noexcept;
     [[nodiscard]] DisplayMode display_mode() const noexcept { return m_workspace.display_mode(); }
-    [[nodiscard]] bool heatmap_in_progress() const noexcept { return !m_pending_heatmap_jobs.isEmpty(); }
+    [[nodiscard]] bool heatmap_in_progress() const noexcept { return !m_pending_heatmap_job.isNull(); }
 
    Q_SIGNALS:
     void display_mode_changed();
@@ -55,9 +54,8 @@ class ApplicationController : public QObject {
 
     WorkspaceDocument m_workspace;
     ImageRepository m_repository;
-    ComparisonService m_comparison_service;
     ComparisonJobQueue m_job_queue;
-    QSet<QUuid> m_pending_heatmap_jobs;
+    QUuid m_pending_heatmap_job;
     QHash<QUuid, QSet<QUuid>> m_in_flight_heatmap_handles_by_job;
     QSet<QUuid> m_deferred_release_handles;
     QSet<QString> m_generated_heatmap_paths;

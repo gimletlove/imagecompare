@@ -6,8 +6,6 @@
 #include <QString>
 #include <vips/vips8>
 
-#include "core/WorkspaceDocument.h"
-
 struct RenderSpec {
     bool ignore_color_profile = false;
 };
@@ -22,7 +20,6 @@ class ImageSource {
 
     [[nodiscard]] const QString& path() const noexcept;
     [[nodiscard]] QSize pixel_size() const;
-    [[nodiscard]] RenderSpec render_spec(DisplayMode mode) const noexcept;
     [[nodiscard]] QImage render_region(const QRect& image_rect, const RenderSpec& spec, const QSize& output_size = {}) const;
 
    private:

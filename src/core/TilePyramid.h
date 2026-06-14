@@ -17,7 +17,6 @@ class TilePyramid {
    private:
     static int clamped_tile_index(int value, int max_inclusive);
 
-    QSize m_base_size;
     int m_tile_size = 256;
     QVector<QSize> m_level_sizes;
 };

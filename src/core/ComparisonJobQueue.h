@@ -6,13 +6,13 @@
 
 #include "core/ComparisonResult.h"
 
-class ComparisonService;
+class ImageRepository;
 
 class ComparisonJobQueue : public QObject {
     Q_OBJECT
 
    public:
-    explicit ComparisonJobQueue(ComparisonService& service, QObject* parent = nullptr);
+    explicit ComparisonJobQueue(ImageRepository& repository, QObject* parent = nullptr);
     ~ComparisonJobQueue() override;
     QUuid enqueue(const ComparisonRequest& request);
 
@@ -21,6 +21,6 @@ class ComparisonJobQueue : public QObject {
     void job_failed(QUuid job_id, QString error_text);
 
    private:
-    ComparisonService& m_service;
+    ImageRepository& m_repository;
     QThreadPool m_thread_pool;
 };

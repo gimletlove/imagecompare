@@ -130,13 +130,6 @@ namespace {
         return result;
     }
 
-    RenderCacheKey make_render_cache_key(const QString& normalized_path, const RenderSpec& spec) {
-        return RenderCacheKey{
-            .normalized_path = normalized_path,
-            .ignore_color_profile = spec.ignore_color_profile,
-        };
-    }
-
     std::mutex& render_cache_mutex() {
         static std::mutex cache_mutex;
         return cache_mutex;
@@ -155,7 +148,7 @@ namespace {
     vips::VImage cached_image_for_spec(const QString& normalized_path, const RenderSpec& spec) {
         constexpr int k_max_cached_images = 10;
 
-        const RenderCacheKey cache_key = make_render_cache_key(normalized_path, spec);
+        const RenderCacheKey cache_key{normalized_path, spec.ignore_color_profile};
         {
             std::lock_guard lock(render_cache_mutex());
             auto& cache_by_key = render_cache_by_key();
@@ -239,15 +232,6 @@ const QString& ImageSource::path() const noexcept { return m_path; }
 QSize ImageSource::pixel_size() const {
     ensure_loaded();
     return m_pixel_size;
-}
-
-RenderSpec ImageSource::render_spec(DisplayMode mode) const noexcept {
-    if (mode == DisplayMode::StrictRaw) {
-        return {
-            .ignore_color_profile = true,
-        };
-    }
-    return {};
 }
 
 QImage ImageSource::render_region(const QRect& image_rect, const RenderSpec& spec, const QSize& output_size) const {

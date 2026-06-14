@@ -88,8 +88,7 @@ namespace {
 #endif
 }  // namespace
 
-ApplicationController::ApplicationController(QObject* parent)
-    : QObject(parent), m_workspace(this), m_comparison_service(m_repository), m_job_queue(m_comparison_service, this) {
+ApplicationController::ApplicationController(QObject* parent) : QObject(parent), m_workspace(this), m_job_queue(m_repository, this) {
     connect(&m_job_queue, &ComparisonJobQueue::job_finished, this, &ApplicationController::on_job_finished);
     connect(&m_job_queue, &ComparisonJobQueue::job_failed, this, &ApplicationController::on_job_failed);
     connect(&m_workspace, &WorkspaceDocument::display_mode_changed, this, &ApplicationController::display_mode_changed);
@@ -144,15 +143,14 @@ void ApplicationController::import_image_paths(const QStringList& paths) {
 }
 
 void ApplicationController::open_images_with_native_dialog() {
-    QFileDialog dialog;
-    dialog.setWindowTitle(QStringLiteral("Open Images"));
-    dialog.setFileMode(QFileDialog::ExistingFiles);
-    dialog.setNameFilter(QStringLiteral("Images (*.png *.jpg *.jpeg *.webp *.avif *.jxl *.heic *.heif *.tif *.tiff *.bmp *.svg)"));
-    dialog.setOption(QFileDialog::DontUseNativeDialog, false);
-    if (dialog.exec() != QDialog::Accepted) {
+    const QStringList paths =
+        QFileDialog::getOpenFileNames(nullptr, QStringLiteral("Open Images"), {},
+                                      QStringLiteral(
+                                          "Images (*.png *.jpg *.jpeg *.webp *.avif *.jxl *.heic *.heif *.tif *.tiff *.bmp *.svg)"));
+    if (paths.isEmpty()) {
         return;
     }
-    import_image_paths(dialog.selectedFiles());
+    import_image_paths(paths);
 }
 
 bool ApplicationController::remove_workspace_entry_by_id(const QString& entry_id) {
@@ -276,7 +274,7 @@ void ApplicationController::clear_existing_derived_heatmaps() {
     }
 
     static_cast<void>(m_workspace.remove_derived_heatmap_entries());
-    m_pending_heatmap_jobs.clear();
+    m_pending_heatmap_job = {};
     remove_tracked_generated_heatmap_paths(paths_to_remove);
     for (const QUuid& handle_id : handles_to_release) {
         release_image_handle_if_unused(handle_id);
@@ -310,7 +308,7 @@ void ApplicationController::build_heatmap() {
         .second_image_handle_id = source_images[1].image_handle_id(),
         .display_mode = m_workspace.display_mode(),
     });
-    m_pending_heatmap_jobs.insert(job_id);
+    m_pending_heatmap_job = job_id;
     m_in_flight_heatmap_handles_by_job.insert(job_id, {source_images[0].image_handle_id(), source_images[1].image_handle_id()});
     if (was_heatmap_in_progress != heatmap_in_progress()) {
         Q_EMIT heatmap_in_progress_changed();
@@ -328,13 +326,14 @@ void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult
     };
     m_in_flight_heatmap_handles_by_job.remove(job_id);
     flush_deferred_image_handle_releases();
-    if (!m_pending_heatmap_jobs.remove(job_id)) {
+    if (m_pending_heatmap_job != job_id) {
         if (result.success && !result.output_path.isEmpty()) {
             delete_generated_heatmap_file(result.output_path);
         }
         emit_heatmap_state_if_changed();
         return;
     }
+    m_pending_heatmap_job = {};
     if (!result.success || result.output_path.isEmpty()) {
         emit_heatmap_state_if_changed();
         return;
@@ -367,7 +366,9 @@ void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult
 
 void ApplicationController::on_job_failed(QUuid job_id, const QString& error_text) {
     const bool was_heatmap_in_progress = heatmap_in_progress();
-    m_pending_heatmap_jobs.remove(job_id);
+    if (m_pending_heatmap_job == job_id) {
+        m_pending_heatmap_job = {};
+    }
     m_in_flight_heatmap_handles_by_job.remove(job_id);
     flush_deferred_image_handle_releases();
     qWarning().noquote() << "Heatmap job failed for" << job_id.toString(QUuid::WithoutBraces) << ":"

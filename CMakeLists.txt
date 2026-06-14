@@ -95,8 +95,6 @@ qt_add_qml_module(imagecompare
     SOURCES
         src/ui/TiledImageItem.h
         src/ui/TiledImageItem.cpp
-        src/ui/TileTextureCache.h
-        src/ui/TileTextureCache.cpp
     QML_FILES
         src/ui/qml/Main.qml
         ${qml_component_files}

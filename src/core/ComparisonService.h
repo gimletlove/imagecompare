@@ -4,11 +4,4 @@
 
 class ImageRepository;
 
-class ComparisonService {
-   public:
-    explicit ComparisonService(ImageRepository& repository);
-    [[nodiscard]] ComparisonResult run(const ComparisonRequest& request) const;
-
-   private:
-    ImageRepository& m_repository;
-};
+[[nodiscard]] ComparisonResult run_comparison(ImageRepository& repository, const ComparisonRequest& request);

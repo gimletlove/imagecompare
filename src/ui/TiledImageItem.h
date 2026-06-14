@@ -1,5 +1,8 @@
 #pragma once
 
+#include <QtQmlIntegration/qqmlintegration.h>
+
+#include <QHash>
 #include <QImage>
 #include <QPoint>
 #include <QPointF>
@@ -10,13 +13,24 @@
 #include <QSize>
 #include <QString>
 #include <QVector>
-#include <QtQmlIntegration/qqmlintegration.h>
 #include <QtGlobal>
 
 #include "core/ImageSource.h"
 #include "core/TilePyramid.h"
 #include "core/ViewState.h"
-#include "ui/TileTextureCache.h"
+#include "core/WorkspaceDocument.h"
+
+struct TileTextureKey {
+    int display_mode = 0;
+    int level = 0;
+    QPoint tile_index;
+
+    friend bool operator==(const TileTextureKey&, const TileTextureKey&) = default;
+};
+
+Q_ALWAYS_INLINE uint qHash(const TileTextureKey& key, uint seed = 0) noexcept {
+    return qHashMulti(seed, key.display_mode, key.level, key.tile_index.x(), key.tile_index.y());
+}
 
 struct TileRenderRequestKey {
     quint64 generation = 0;
@@ -79,7 +93,6 @@ class TiledImageItem : public QQuickItem {
 
    private:
     void clear_tile_state();
-    [[nodiscard]] RenderSpec current_render_spec() const noexcept;
     [[nodiscard]] QRectF visible_image_rect() const;
     [[nodiscard]] QRectF prefetch_image_rect(const QRectF& visible_rect) const;
     [[nodiscard]] QRect tile_image_rect(int level, const QPoint& tile_index) const;
@@ -98,7 +111,7 @@ class TiledImageItem : public QQuickItem {
     QRectF m_viewport_rect;
     ViewState m_view_state;
     TilePyramid m_tile_pyramid;
-    TileTextureCache m_texture_cache;
+    QHash<TileTextureKey, QImage> m_texture_cache;
     QSet<TileRenderRequestKey> m_pending_tile_requests;
     QSet<TileRenderRequestKey> m_failed_tile_requests;
     QVector<QPoint> m_active_tile_indices;

@@ -1,22 +1,8 @@
 #include "core/ViewableImageEntry.h"
 
 #include <QFileInfo>
+#include <QLocale>
 #include <utility>
-
-namespace {
-    QString format_file_size(qint64 bytes) {
-        constexpr double kilobyte = 1024.0;
-        constexpr double megabyte = 1024.0 * 1024.0;
-
-        if (bytes >= static_cast<qint64>(megabyte)) {
-            return QStringLiteral("%1 MB").arg(static_cast<double>(bytes) / megabyte, 0, 'f', 2);
-        }
-        if (bytes < static_cast<qint64>(kilobyte)) {
-            return QStringLiteral("%1 B").arg(bytes);
-        }
-        return QStringLiteral("%1 KB").arg(static_cast<double>(bytes) / kilobyte, 0, 'f', 2);
-    }
-}  // namespace
 
 ViewableImageEntry ViewableImageEntry::from_source(QUuid entry_id, QUuid image_handle_id, QString path, QSize pixel_size) {
     ViewableImageEntry entry;
@@ -27,7 +13,8 @@ ViewableImageEntry ViewableImageEntry::from_source(QUuid entry_id, QUuid image_h
     entry.m_image_path = std::move(path);
     entry.m_primary_header_label = file_info.fileName();
     const QString resolution = QStringLiteral("%1x%2").arg(pixel_size.width()).arg(pixel_size.height());
-    entry.m_secondary_header_label = QStringLiteral("%1 • %2").arg(resolution, format_file_size(file_info.size()));
+    entry.m_secondary_header_label =
+        QStringLiteral("%1 • %2").arg(resolution, QLocale().formattedDataSize(file_info.size(), 2, QLocale::DataSizeTraditionalFormat));
     entry.m_pixel_size = pixel_size;
     return entry;
 }
