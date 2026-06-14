@@ -74,7 +74,7 @@ The Windows build is distributed as a portable zip with its runtime dependencies
 - Use **Stack** or press `v` to stack images and cycle between them with the arrow keys.
 - Use **Match Zoom** or press `h` to normalize zoom and pan across images with different dimensions.
 - Use **Faithful / Raw** or press `r` to switch between embedded color-profile rendering and raw display mode.
-- Use **Build Heatmap** or press `b` to build a perceptual heatmap of differences from 2 images with the same dimensions.
+- Use **Heatmap** or press `b` to build a perceptual heatmap of differences from 2 images with the same dimensions.
 - Right-click an image pane to open the context menu for further actions.
 - Use Ctrl+W on the active pane to close it.
 - Use Ctrl+Left and Ctrl+Right to move the images.
@@ -85,7 +85,7 @@ Image Compare is useful for:
 
 - Spotting subtle visual changes between image versions
 - Spotting subtle differences between different compression methods, such as JXL or AVIF
-- Creating a heatmap of differences between images 
+- Creating a heatmap of differences between images
 
 ## Runtime Requirements
 

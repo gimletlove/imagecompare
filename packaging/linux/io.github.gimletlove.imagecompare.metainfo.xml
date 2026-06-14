@@ -32,6 +32,15 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1.4" date="2026-06-14">
+      <description>
+        <ul>
+          <li>Improve shortcut handling with native Qt controls</li>
+          <li>Simplify image rendering, tile caching, and heatmap job internals</li>
+          <li>Reduce duplicated workspace state and cleanup generated heatmap handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.3" date="2026-05-18">
       <description>
         <ul>
@@ -48,7 +57,7 @@
           <li>Fix Flatpak file paths and folder opening</li>
           <li>Make Flatpak-specific build dependencies optional for normal builds</li>
           <li>Fix blurry image rendering when zoomed out</li>
-          <li>Small bug fixes</li>     
+          <li>Small bug fixes</li>
         </ul>
       </description>
     </release>
