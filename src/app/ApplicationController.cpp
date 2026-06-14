@@ -274,7 +274,7 @@ void ApplicationController::clear_existing_derived_heatmaps() {
     }
 
     static_cast<void>(m_workspace.remove_derived_heatmap_entries());
-    m_pending_heatmap_job = {};
+    m_pending_heatmap_job = QUuid{};
     remove_tracked_generated_heatmap_paths(paths_to_remove);
     for (const QUuid& handle_id : handles_to_release) {
         release_image_handle_if_unused(handle_id);
@@ -333,7 +333,7 @@ void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult
         emit_heatmap_state_if_changed();
         return;
     }
-    m_pending_heatmap_job = {};
+    m_pending_heatmap_job = QUuid{};
     if (!result.success || result.output_path.isEmpty()) {
         emit_heatmap_state_if_changed();
         return;
@@ -367,7 +367,7 @@ void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult
 void ApplicationController::on_job_failed(QUuid job_id, const QString& error_text) {
     const bool was_heatmap_in_progress = heatmap_in_progress();
     if (m_pending_heatmap_job == job_id) {
-        m_pending_heatmap_job = {};
+        m_pending_heatmap_job = QUuid{};
     }
     m_in_flight_heatmap_handles_by_job.remove(job_id);
     flush_deferred_image_handle_releases();

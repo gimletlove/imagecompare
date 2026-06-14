@@ -16,7 +16,7 @@ env:
   LINUX_PACKAGE_NAME: imagecompare-${{ inputs.version }}-linux-x86_64
   WINDOWS_PACKAGE_NAME: imagecompare-${{ inputs.version }}-windows-x86_64
   QT_VERSION: '6.8.3'
-  VIPS_VERSION: '8.18.2'
+  VIPS_VERSION: '8.18.3'
 
 jobs:
   package-linux:
