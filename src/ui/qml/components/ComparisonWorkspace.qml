@@ -112,6 +112,8 @@ Item {
         shortcut: "V"
         text: "Stack (v)"
         enabled: panes_grid.can_overlay_action
+        checkable: true
+        checked: panes_grid.overlay_mode_enabled
         onTriggered: root.toggle_overlay_mode()
     }
 
@@ -120,6 +122,8 @@ Item {
         shortcut: "H"
         text: "Match Zoom (h)"
         enabled: panes_grid.can_match_zoom_action
+        checkable: true
+        checked: panes_grid.match_zoom_enabled
         onTriggered: root.toggle_match_zoom()
     }
 
@@ -196,8 +200,6 @@ Item {
                 zoom_fit_action: zoom_fit_action
                 overlay_action: overlay_action
                 match_zoom_action: match_zoom_action
-                overlay_mode_active: panes_grid.overlay_mode_enabled
-                match_zoom_enabled: panes_grid.match_zoom_enabled
             }
         }
 

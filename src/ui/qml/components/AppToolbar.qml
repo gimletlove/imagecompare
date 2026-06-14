@@ -10,8 +10,6 @@ Item {
     property var zoom_fit_action
     property var overlay_action
     property var match_zoom_action
-    property bool overlay_mode_active: false
-    property bool match_zoom_enabled: false
 
     RowLayout {
         anchors.fill: parent
@@ -55,8 +53,6 @@ Item {
 
         ToolButton {
             action: root.overlay_action
-            checkable: true
-            checked: root.overlay_mode_active
             property string tool_tip_text: "Stack image panes and cycle with arrow keys"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
@@ -65,8 +61,6 @@ Item {
 
         ToolButton {
             action: root.match_zoom_action
-            checkable: true
-            checked: root.match_zoom_enabled
             property string tool_tip_text: "Normalize zoom and pan across different image sizes"
             ToolTip.visible: hovered
             ToolTip.text: tool_tip_text
