@@ -74,6 +74,111 @@ Item {
         return true;
     }
 
+    Action {
+        id: open_action
+        shortcut: "O"
+        text: "Open (o)"
+        onTriggered: root.open_requested()
+    }
+
+    Action {
+        id: heatmap_action
+        shortcut: "B"
+        text: root.controller && root.controller.heatmap_in_progress ? "Building..." : "Heatmap (b)"
+        enabled: root.controller && root.controller.workspace
+            ? !root.controller.heatmap_in_progress && root.controller.workspace.can_build_heatmap
+            : false
+        onTriggered: root.build_heatmap()
+    }
+
+    Action {
+        id: display_mode_action
+        shortcut: "R"
+        text: (root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful") + " (r)"
+        enabled: panes_grid.can_best_fit_action
+        onTriggered: root.toggle_display_mode()
+    }
+
+    Action {
+        id: zoom_fit_action
+        shortcut: "F"
+        text: panes_grid.zoom_readout + " (f)"
+        enabled: panes_grid.can_best_fit_action
+        onTriggered: root.toggle_zoom_fit()
+    }
+
+    Action {
+        id: overlay_action
+        shortcut: "V"
+        text: "Stack (v)"
+        enabled: panes_grid.can_overlay_action
+        onTriggered: root.toggle_overlay_mode()
+    }
+
+    Action {
+        id: match_zoom_action
+        shortcut: "H"
+        text: "Match Zoom (h)"
+        enabled: panes_grid.can_match_zoom_action
+        onTriggered: root.toggle_match_zoom()
+    }
+
+    Action {
+        id: copy_action
+        shortcut: "Ctrl+C"
+        onTriggered: panes_grid.copy_active_path()
+    }
+
+    Action {
+        id: remove_action
+        shortcut: "Ctrl+W"
+        onTriggered: panes_grid.remove_active_entry()
+    }
+
+    Action {
+        id: move_left_action
+        shortcut: "Ctrl+Left"
+        onTriggered: panes_grid.move_active_pane(-1)
+    }
+
+    Action {
+        id: move_right_action
+        shortcut: "Ctrl+Right"
+        onTriggered: panes_grid.move_active_pane(1)
+    }
+
+    Action {
+        id: focus_action
+        shortcut: "Return"
+        onTriggered: panes_grid.toggle_focus_active_pane()
+    }
+
+    Action {
+        id: enter_focus_action
+        shortcut: "Enter"
+        onTriggered: focus_action.trigger()
+    }
+
+    Action {
+        id: clear_focus_action
+        shortcut: "Escape"
+        onTriggered: panes_grid.clear_focus()
+    }
+
+    Action {
+        id: cycle_forward_action
+        shortcut: "Right"
+        enabled: panes_grid.overlay_mode_enabled
+        onTriggered: root.cycle_overlay_forward()
+    }
+
+    Action {
+        id: cycle_backward_action
+        shortcut: "Left"
+        enabled: panes_grid.overlay_mode_enabled
+        onTriggered: root.cycle_overlay_backward()
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 4
@@ -85,24 +190,14 @@ Item {
 
             AppToolbar {
                 anchors.fill: parent
-                zoom_readout: panes_grid.zoom_readout
+                open_action: open_action
+                heatmap_action: heatmap_action
+                display_mode_action: display_mode_action
+                zoom_fit_action: zoom_fit_action
+                overlay_action: overlay_action
+                match_zoom_action: match_zoom_action
                 overlay_mode_active: panes_grid.overlay_mode_enabled
                 match_zoom_enabled: panes_grid.match_zoom_enabled
-                can_best_fit_action: panes_grid.can_best_fit_action
-                can_display_mode_action: panes_grid.can_best_fit_action
-                can_heatmap_action: root.controller && root.controller.workspace
-                    ? root.controller.workspace.can_build_heatmap
-                    : false
-                can_overlay_action: panes_grid.can_overlay_action
-                can_match_zoom_action: panes_grid.can_match_zoom_action
-                heatmap_in_progress: root.controller ? root.controller.heatmap_in_progress : false
-                display_mode_toggle_text: root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful"
-                onOpen_requested: root.open_requested()
-                onHeatmap_requested: root.build_heatmap()
-                onZoom_fit_toggle_requested: root.toggle_zoom_fit()
-                onOverlay_mode_toggle_requested: root.toggle_overlay_mode()
-                onMatch_zoom_toggle_requested: root.toggle_match_zoom()
-                onDisplay_mode_toggle_requested: root.toggle_display_mode()
             }
         }
 
@@ -137,93 +232,4 @@ Item {
         }
     }
 
-    Shortcut {
-        sequence: "O"
-        context: Qt.ApplicationShortcut
-        onActivated: root.open_requested()
-    }
-
-    Shortcut {
-        sequence: "B"
-        context: Qt.ApplicationShortcut
-        onActivated: root.build_heatmap()
-    }
-
-    Shortcut {
-        sequence: "R"
-        context: Qt.ApplicationShortcut
-        onActivated: root.toggle_display_mode()
-    }
-
-    Shortcut {
-        sequence: "Ctrl+C"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.copy_active_path()
-    }
-
-    Shortcut {
-        sequence: "Ctrl+W"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.remove_active_entry()
-    }
-
-    Shortcut {
-        sequence: "Ctrl+Left"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.move_active_pane(-1)
-    }
-
-    Shortcut {
-        sequence: "Ctrl+Right"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.move_active_pane(1)
-    }
-
-    Shortcut {
-        sequence: "F"
-        context: Qt.ApplicationShortcut
-        onActivated: root.toggle_zoom_fit()
-    }
-
-    Shortcut {
-        sequence: "Return"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.toggle_focus_active_pane()
-    }
-
-    Shortcut {
-        sequence: "Enter"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.toggle_focus_active_pane()
-    }
-
-    Shortcut {
-        sequence: "Escape"
-        context: Qt.ApplicationShortcut
-        onActivated: panes_grid.clear_focus()
-    }
-
-    Shortcut {
-        sequence: "V"
-        context: Qt.ApplicationShortcut
-        onActivated: root.toggle_overlay_mode()
-    }
-
-    Shortcut {
-        sequence: "H"
-        context: Qt.ApplicationShortcut
-        onActivated: root.toggle_match_zoom()
-    }
-
-    Shortcut {
-        sequence: "Right"
-        context: Qt.ApplicationShortcut
-        onActivated: root.cycle_overlay_forward()
-    }
-
-    Shortcut {
-        sequence: "Left"
-        context: Qt.ApplicationShortcut
-        onActivated: root.cycle_overlay_backward()
-    }
 }
