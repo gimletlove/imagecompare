@@ -5,31 +5,41 @@
 [![AUR](https://img.shields.io/aur/version/imagecompare-bin?label=AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
 
-**Image Compare** is a desktop image comparison and visual diff tool for comparing two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. It supports synchronized zoom and pan, grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips.
+**Image Compare** is a desktop image comparison and visual diff tool for Linux and Windows. It compares two or more images side by side, in a stacked view, or in a grid layout, and can generate perceptual heatmaps to highlight visual differences between two images.
 
-Use it to compare screenshots, rendered images, exports, design revisions, before/after edits, and subtle visual differences between image versions.
+Use it to compare different versions of the same image, choose the best-quality copy from multiple sources, check compression artifacts, inspect scans or image exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.
 
-## Screenshots
+## Screenshot
 
 ![Image Compare app showing side-by-side image comparison and heatmap differences](./image-compare-screenshot.png)
 
 ## Features
 
-- Compare two or more images side by side
-- Stack images and cycle between them with arrow keys
-- Focus the active image with Enter, and reorder images with Ctrl+Left / Ctrl+Right
-- Match zoom and pan across images with different dimensions
-- Generate perceptual heatmap differences between two same-size images, with overall and peak dE00 readouts
-- Export generated heatmaps
-- Use pane context menus to copy paths, open containing folders, move images, and close files
-- Use a grid layout when four or more images are loaded
-- Render images faithfully with embedded color profiles, or view them in raw mode
-- Open images with drag-and-drop, file picker, command-line arguments, or your file manager’s **Open With** menu
-- Load, zoom, and pan large images efficiently
+- Open images with drag-and-drop, the file picker, command-line arguments, or file manager **Open With** actions
+- Compare two or more images side by side, stacked, or in a grid layout
+- Synchronize zoom and pan across images, including images with different dimensions
+- Use stacked view to flip between images in the same position for quick comparison
+- Generate and export perceptual heatmaps from two images to highlight subtle visual differences
+- Switch between embedded color-profile rendering and raw rendering
+- Copy image paths, open containing folders, move images, and close files from pane context menus
+- Load, zoom, and pan images efficiently with Qt6 and libvips
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|---|---|
+| `o` | Open images |
+| `f` | Toggle best fit / 100% zoom |
+| `v` | Toggle stacked view |
+| Arrow keys | Cycle images in stacked view |
+| `Enter` | Focus the active image |
+| `h` | Match zoom and pan |
+| `r` | Toggle color-profile / raw rendering |
+| `b` | Build heatmap |
+| `Ctrl+W` | Close active pane |
+| `Ctrl+Left` / `Ctrl+Right` | Move image left / right |
 
 ## Install
-
-Linux release builds and Windows portable zip packages are available from GitHub Releases.
 
 ### GitHub Releases
 
@@ -49,10 +59,6 @@ Available release artifacts include:
 flatpak install flathub io.github.gimletlove.imagecompare
 ```
 
-<a href="https://flathub.org/apps/details/io.github.gimletlove.imagecompare">
-  <img alt="Download Image Compare on Flathub" src="https://flathub.org/api/badge?svg&locale=en"/>
-</a>
-
 ### Arch Linux AUR
 
 ```bash
@@ -65,43 +71,16 @@ Download `imagecompare-<version>-windows-x86_64.zip` from GitHub Releases, extra
 
 The Windows build is distributed as a portable zip with its runtime dependencies bundled.
 
-## How To Use
-
-- Drag and drop image files into the app, or use **Open** or press `o` in the toolbar.
-- Pass image paths on the command line when launching the app.
-- Use **Open With** from your file manager, if supported, to open selected images in Image Compare.
-- Use the zoom readout or press `f` to toggle between best fit and 100% zoom.
-- Use **Stack** or press `v` to stack images and cycle between them with the arrow keys.
-- Use **Match Zoom** or press `h` to normalize zoom and pan across images with different dimensions.
-- Use **Faithful / Raw** or press `r` to switch between embedded color-profile rendering and raw display mode.
-- Use **Heatmap** or press `b` to build a perceptual heatmap of differences from 2 images with the same dimensions.
-- Right-click an image pane to open the context menu for further actions.
-- Use Ctrl+W on the active pane to close it.
-- Use Ctrl+Left and Ctrl+Right to move the images.
-
-## Use Cases
-
-Image Compare is useful for:
-
-- Spotting subtle visual changes between image versions
-- Spotting subtle differences between different compression methods, such as JXL or AVIF
-- Creating a heatmap of differences between images
-
-## Runtime Requirements
-
-Packaged release builds include or declare the runtime dependencies they need. Building or running from source requires:
-
-- Qt6 runtime libraries
-- libvips runtime libraries
-
-## Build Requirements
+## Build from Source
 
 Local source builds are intended for Linux. Windows packages are produced by the GitHub Actions release workflow.
 
-- C++20 compiler
-- CMake 3.21+
-- Qt6
-- libvips and vips-cpp
+Build requirements:
+
+* C++20 compiler
+* CMake 3.21+
+* Qt6
+* libvips and vips-cpp
 
 Check installed dependency versions:
 
@@ -111,14 +90,15 @@ pkg-config --modversion vips
 pkg-config --modversion vips-cpp
 ```
 
-## Build
+Build and run:
 
 ```bash
 cmake -S . -B build
 cmake --build build
+./build/imagecompare
 ```
 
-Enable Flatpak-specific portal integration for Flatpak builds:
+Flatpak builds can enable portal integration with:
 
 ```bash
 cmake -S . -B build-flatpak -DIMAGECOMPARE_FLATPAK=ON
@@ -126,14 +106,6 @@ cmake --build build-flatpak
 ```
 
 Flatpak builds also require Qt6 DBus and KDE Frameworks 6 CoreAddons.
-
-## Run
-
-Open the app:
-
-```bash
-./build/imagecompare
-```
 
 ## Project Links
 
