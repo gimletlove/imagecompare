@@ -16,7 +16,7 @@ env:
   LINUX_PACKAGE_NAME: imagecompare-${{ inputs.version }}-linux-x86_64
   WINDOWS_PACKAGE_NAME: imagecompare-${{ inputs.version }}-windows-x86_64
   QT_VERSION: '6.8.3'
-  VIPS_VERSION: '8.18.3'
+  VIPS_VERSION: '8.18.4'
 
 jobs:
   package-linux:
@@ -37,7 +37,6 @@ jobs:
             ninja-build \
             pkg-config \
             rpm \
-            zip \
             qt6-base-dev \
             qt6-base-dev-tools \
             qt6-declarative-dev \
@@ -55,7 +54,7 @@ jobs:
       - name: Archive Linux install tree
         run: |
           mkdir -p packages
-          (cd stage && zip -r "../packages/${LINUX_PACKAGE_NAME}.zip" linux)
+          cmake -E chdir stage cmake -E tar cf "../packages/${LINUX_PACKAGE_NAME}.zip" --format=zip linux
 
       - name: Archive source tree
         run: git archive --format=tar.gz --prefix="imagecompare-${PACKAGE_VERSION}/" --output="packages/imagecompare-${PACKAGE_VERSION}-source.tar.gz" HEAD
@@ -162,6 +161,7 @@ jobs:
           Get-ChildItem "$vipsRoot\lib\pkgconfig" -Filter '*.pc' | ForEach-Object {
             $content = Get-Content $_.FullName
             $content = $content -replace '^prefix=.*$', "prefix=$prefix"
+            $content = $content -replace '/ucrt64', $prefix
             $content = $content -replace '\s-lintl\b', ''
             $content = $content | Where-Object { $_ -notmatch '^(Requires|Libs)\.private:' }
             $content | Set-Content $_.FullName -Encoding ascii
@@ -210,7 +210,6 @@ jobs:
           $qtPaths = Join-Path $env:QT_ROOT_DIR 'bin\qtpaths6.exe'
           & $windeployQt `
             --qtpaths "$qtPaths" `
-            --no-plugins `
             --no-translations `
             --no-opengl-sw `
             --qmldir "$PWD\src\ui\qml" `
@@ -219,22 +218,16 @@ jobs:
             throw "windeployqt failed with exit code $LASTEXITCODE"
           }
 
-          $pluginTypes = @(
-            'platforms',
-            'imageformats',
-            'iconengines',
-            'styles',
-            'networkinformation',
-            'tls'
-          )
-          foreach ($pluginType in $pluginTypes) {
-            $pluginDir = Join-Path $env:QT_ROOT_DIR "plugins\$pluginType"
-            if (Test-Path $pluginDir) {
-              Copy-Item $pluginDir $deployDir -Recurse -Force
-            }
+          foreach ($pluginType in @('imageformats', 'styles', 'networkinformation', 'tls')) {
+            Remove-Item (Join-Path $deployDir $pluginType) -Recurse -Force -ErrorAction SilentlyContinue
           }
+
           if (-not (Test-Path "$deployDir\platforms\qwindows.dll")) {
             throw 'Missing Qt Windows platform plugin after deployment'
+          }
+
+          if (-not (Test-Path "$deployDir\iconengines\qsvgicon.dll")) {
+            throw 'Missing Qt SVG icon engine plugin after deployment'
           }
 
           if (-not (Test-Path "$deployDir\libglib-2.0-0.dll")) {

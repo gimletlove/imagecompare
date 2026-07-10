@@ -1,4 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" fill="none">
+  <g transform="translate(512 512) scale(1.45) translate(-512 -512)">
   <!-- transparent background -->
   <rect x="170" y="170" width="684" height="684" rx="120" fill="#111216"/>
 
@@ -9,4 +10,5 @@
   <!-- differing pixels -->
   <rect x="392" y="452" width="72" height="72" rx="16" fill="#FFCC00"/>
   <rect x="560" y="560" width="72" height="72" rx="16" fill="#FFCC00"/>
+  </g>
 </svg>

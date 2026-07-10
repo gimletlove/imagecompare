@@ -32,6 +32,16 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.1.5" date="2026-07-10">
+      <description>
+        <ul>
+          <li>Simplify image loading, caching, and heatmap processing</li>
+          <li>Reduce duplicated application, workspace, and QML state</li>
+          <li>Improve generated heatmap cleanup and image re-import handling</li>
+          <li>Improve application icon sizing across desktop environments</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.4" date="2026-06-14">
       <description>
         <ul>

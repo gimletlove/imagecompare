@@ -335,7 +335,7 @@ void ApplicationController::cancel_pending_heatmap() {
     if (!heatmap_in_progress()) {
         return;
     }
-    m_pending_heatmap_job = {};
+    m_pending_heatmap_job = QUuid{};
     Q_EMIT heatmap_in_progress_changed();
 }
 
