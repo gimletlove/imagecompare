@@ -5,32 +5,23 @@
 #include <QUuid>
 #include <cstdint>
 
-class ViewableImageEntry {
-   public:
+struct ViewableImageEntry {
     enum class EntryKind : std::uint8_t {
         Source,
         Derived,
     };
 
-    static ViewableImageEntry from_source(QUuid entry_id, QUuid image_handle_id, QString path, QSize pixel_size);
-    static ViewableImageEntry from_derived_heatmap(QUuid entry_id, QUuid image_handle_id, QString output_path, QSize pixel_size,
+    static ViewableImageEntry from_source(QUuid entry_id, QString path, QSize pixel_size);
+    static ViewableImageEntry from_derived_heatmap(QUuid entry_id, QString output_path, QSize pixel_size,
                                                    QString secondary_header_label = {});
 
-    [[nodiscard]] bool is_source() const noexcept;
-    [[nodiscard]] bool is_derived() const noexcept;
-    [[nodiscard]] QSize pixel_size() const noexcept;
-    [[nodiscard]] QUuid entry_id() const noexcept;
-    [[nodiscard]] QUuid image_handle_id() const noexcept;
-    [[nodiscard]] QString image_path() const;
-    [[nodiscard]] QString primary_header_label() const;
-    [[nodiscard]] QString secondary_header_label() const;
+    [[nodiscard]] bool is_source() const noexcept { return kind == EntryKind::Source; }
+    [[nodiscard]] bool is_derived() const noexcept { return kind == EntryKind::Derived; }
 
-   private:
-    EntryKind m_kind = EntryKind::Source;
-    QUuid m_entry_id;
-    QUuid m_image_handle_id;
-    QString m_image_path;
-    QString m_primary_header_label;
-    QString m_secondary_header_label;
-    QSize m_pixel_size;
+    EntryKind kind = EntryKind::Source;
+    QUuid entry_id;
+    QString image_path;
+    QString primary_header_label;
+    QString secondary_header_label;
+    QSize pixel_size;
 };

@@ -2,13 +2,12 @@
 
 #include <QMetaType>
 #include <QString>
-#include <QUuid>
 
 #include "core/WorkspaceDocument.h"
 
 struct ComparisonRequest {
-    QUuid first_image_handle_id;
-    QUuid second_image_handle_id;
+    QString first_image_path;
+    QString second_image_path;
     DisplayMode display_mode = DisplayMode::Faithful;
 };
 

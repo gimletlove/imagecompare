@@ -2,11 +2,11 @@
 
 #include <vips/vips.h>
 
+#include <QCache>
 #include <QFileInfo>
-#include <QHash>
-#include <algorithm>
-#include <deque>
+#include <cstddef>
 #include <exception>
+#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <vips/vips8>
@@ -14,6 +14,7 @@
 namespace {
     constexpr int k_tile_cache_tile_size = 256;
     constexpr int k_tile_cache_max_tiles = 512;
+    constexpr qsizetype k_max_cached_images = 10;
 
     void ensure_vips_initialized() {
         static std::once_flag init_flag;
@@ -31,7 +32,7 @@ namespace {
         friend bool operator==(const RenderCacheKey&, const RenderCacheKey&) = default;
     };
 
-    uint qHash(const RenderCacheKey& key, uint seed = 0) noexcept {
+    std::size_t qHash(const RenderCacheKey& key, std::size_t seed = 0) noexcept {
         return qHashMulti(seed, key.normalized_path, key.ignore_color_profile);
     }
 
@@ -77,7 +78,7 @@ namespace {
             try {
                 image = image.colourspace(VIPS_INTERPRETATION_sRGB);
             } catch (const std::exception&) {
-                // Unsupported color layouts fall back to the band handling below.
+                // Unsupported color layouts fall back to band handling below.
             }
         }
         if (image.format() != VIPS_FORMAT_UCHAR) {
@@ -135,32 +136,17 @@ namespace {
         return cache_mutex;
     }
 
-    QHash<RenderCacheKey, vips::VImage>& render_cache_by_key() {
-        static QHash<RenderCacheKey, vips::VImage> cache_by_key;
-        return cache_by_key;
-    }
-
-    std::deque<RenderCacheKey>& render_cache_recency() {
-        static std::deque<RenderCacheKey> recency;
-        return recency;
+    QCache<RenderCacheKey, vips::VImage>& render_cache() {
+        static QCache<RenderCacheKey, vips::VImage> cache(k_max_cached_images);
+        return cache;
     }
 
     vips::VImage cached_image_for_spec(const QString& normalized_path, const RenderSpec& spec) {
-        constexpr int k_max_cached_images = 10;
-
         const RenderCacheKey cache_key{normalized_path, spec.ignore_color_profile};
         {
             std::lock_guard lock(render_cache_mutex());
-            auto& cache_by_key = render_cache_by_key();
-            auto& recency = render_cache_recency();
-            const auto it = cache_by_key.constFind(cache_key);
-            if (it != cache_by_key.cend()) {
-                const auto found = std::find(recency.begin(), recency.end(), cache_key);
-                if (found != recency.end()) {
-                    recency.erase(found);
-                }
-                recency.push_front(cache_key);
-                return it.value();
+            if (const auto* cached = render_cache().object(cache_key)) {
+                return *cached;
             }
         }
 
@@ -168,19 +154,13 @@ namespace {
 
         {
             std::lock_guard lock(render_cache_mutex());
-            auto& cache_by_key = render_cache_by_key();
-            auto& recency = render_cache_recency();
-            const auto existing_entry = cache_by_key.constFind(cache_key);
-            if (existing_entry != cache_by_key.cend()) {
-                return existing_entry.value();
+            if (const auto* cached = render_cache().object(cache_key)) {
+                return *cached;
             }
-            cache_by_key.insert(cache_key, loaded_image);
-            recency.push_front(cache_key);
-            while (static_cast<int>(recency.size()) > k_max_cached_images) {
-                const RenderCacheKey evicted = recency.back();
-                recency.pop_back();
-                cache_by_key.remove(evicted);
-            }
+            auto cached = std::make_unique<vips::VImage>(loaded_image);
+            [[maybe_unused]] const bool inserted = render_cache().insert(cache_key, cached.get());
+            [[maybe_unused]] auto* transferred = cached.release();
+            Q_ASSERT(inserted && transferred != nullptr);
         }
 
         return loaded_image;
@@ -192,17 +172,12 @@ namespace {
         }
 
         std::lock_guard lock(render_cache_mutex());
-        auto& cache_by_key = render_cache_by_key();
-        for (auto it = cache_by_key.begin(); it != cache_by_key.end();) {
-            if (it.key().normalized_path == normalized_path) {
-                it = cache_by_key.erase(it);
-            } else {
-                ++it;
+        auto& cache = render_cache();
+        for (const RenderCacheKey& key : cache.keys()) {
+            if (key.normalized_path == normalized_path) {
+                cache.remove(key);
             }
         }
-
-        auto& recency = render_cache_recency();
-        std::erase_if(recency, [&normalized_path](const RenderCacheKey& key) { return key.normalized_path == normalized_path; });
     }
 }  // namespace
 

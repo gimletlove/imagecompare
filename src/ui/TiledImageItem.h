@@ -14,6 +14,7 @@
 #include <QString>
 #include <QVector>
 #include <QtGlobal>
+#include <cstddef>
 
 #include "core/ImageSource.h"
 #include "core/TilePyramid.h"
@@ -28,7 +29,7 @@ struct TileTextureKey {
     friend bool operator==(const TileTextureKey&, const TileTextureKey&) = default;
 };
 
-Q_ALWAYS_INLINE uint qHash(const TileTextureKey& key, uint seed = 0) noexcept {
+Q_ALWAYS_INLINE std::size_t qHash(const TileTextureKey& key, std::size_t seed = 0) noexcept {
     return qHashMulti(seed, key.display_mode, key.level, key.tile_index.x(), key.tile_index.y());
 }
 
@@ -40,7 +41,7 @@ struct TileRenderRequestKey {
     friend bool operator==(const TileRenderRequestKey&, const TileRenderRequestKey&) = default;
 };
 
-Q_ALWAYS_INLINE uint qHash(const TileRenderRequestKey& key, uint seed = 0) noexcept {
+Q_ALWAYS_INLINE std::size_t qHash(const TileRenderRequestKey& key, std::size_t seed = 0) noexcept {
     return qHashMulti(seed, key.generation, key.level, key.tile_index.x(), key.tile_index.y());
 }
 

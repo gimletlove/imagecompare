@@ -31,18 +31,6 @@ namespace {
     constexpr int k_max_preview_dimension = 3072;
     constexpr qsizetype k_max_preview_pixels = 4'000'000;
 
-    struct TileNodeKey {
-        quint64 generation = 0;
-        int level = 0;
-        QPoint tile_index;
-
-        friend bool operator==(const TileNodeKey&, const TileNodeKey&) = default;
-    };
-
-    uint qHash(const TileNodeKey& key, uint seed = 0) noexcept {
-        return qHashMulti(seed, key.generation, key.level, key.tile_index.x(), key.tile_index.y());
-    }
-
     TileTextureKey tile_texture_key(int display_mode, int level, const QPoint& tile_index) {
         return {
             .display_mode = display_mode,
@@ -60,7 +48,7 @@ namespace {
     struct TileSceneGraphRootNode final : public QSGNode {
         QSGSimpleTextureNode* preview_node = nullptr;
         quint64 preview_generation = 0;
-        QHash<TileNodeKey, QSGSimpleTextureNode*> nodes_by_key;
+        QHash<TileRenderRequestKey, QSGSimpleTextureNode*> nodes_by_key;
     };
 
     void clear_preview_node(TileSceneGraphRootNode* root_node) {
@@ -328,16 +316,16 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
     }
 
     const int level = m_tile_pyramid.level_for_zoom(m_view_state.zoom_factor());
-    QSet<TileNodeKey> active_keys;
+    QSet<TileRenderRequestKey> active_keys;
     active_keys.reserve(m_active_tile_indices.size());
 
-    for (const QPoint& tile_index : m_active_tile_indices) {
+    for (const QPoint& tile_index : std::as_const(m_active_tile_indices)) {
         const auto tile_image = m_texture_cache.constFind(tile_texture_key(m_display_mode, level, tile_index));
         if (tile_image == m_texture_cache.cend() || tile_image->isNull()) {
             continue;
         }
 
-        const TileNodeKey key{
+        const TileRenderRequestKey key{
             .generation = m_scene_generation,
             .level = level,
             .tile_index = tile_index,
@@ -369,7 +357,7 @@ QSGNode* TiledImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*
         }
 
         if (it.key().generation != m_scene_generation) {
-            const TileNodeKey current_tile_key{
+            const TileRenderRequestKey current_tile_key{
                 .generation = m_scene_generation,
                 .level = it.key().level,
                 .tile_index = it.key().tile_index,

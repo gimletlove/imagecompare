@@ -4,26 +4,19 @@
 
 WorkspaceDocument::WorkspaceDocument(QObject* parent) : QObject(parent), m_entries_model(this) {}
 
-QUuid WorkspaceDocument::add_source_entry(const QUuid& image_handle_id, const QString& path, const QSize& pixel_size) {
+QUuid WorkspaceDocument::add_source_entry(const QString& path, const QSize& pixel_size) {
     if (entry_count() >= k_max_entries) {
         return {};
     }
 
-    const bool previous_can_build_heatmap = can_build_heatmap();
-
     const QUuid entry_id = QUuid::createUuid();
-    const ViewableImageEntry entry = ViewableImageEntry::from_source(entry_id, image_handle_id, path, pixel_size);
+    const ViewableImageEntry entry = ViewableImageEntry::from_source(entry_id, path, pixel_size);
     m_entries_model.append_entry(entry);
     Q_EMIT entry_count_changed();
-    if (previous_can_build_heatmap != can_build_heatmap()) {
-        Q_EMIT can_build_heatmap_changed();
-    }
     return entry_id;
 }
 
-QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const QString& output_path, const QSize& pixel_size,
-                                           const QString& secondary_header_label) {
-    const bool previous_can_build_heatmap = can_build_heatmap();
+QUuid WorkspaceDocument::add_derived_entry(const QString& output_path, const QSize& pixel_size, const QString& secondary_header_label) {
     const int previous_entry_count = entry_count();
 
     for (int index = entry_count() - 1; index >= 0; --index) {
@@ -37,21 +30,14 @@ QUuid WorkspaceDocument::add_derived_entry(const QUuid& image_handle_id, const Q
         if (previous_entry_count != entry_count()) {
             Q_EMIT entry_count_changed();
         }
-        if (previous_can_build_heatmap != can_build_heatmap()) {
-            Q_EMIT can_build_heatmap_changed();
-        }
         return {};
     }
 
     const QUuid entry_id = QUuid::createUuid();
-    const ViewableImageEntry entry =
-        ViewableImageEntry::from_derived_heatmap(entry_id, image_handle_id, output_path, pixel_size, secondary_header_label);
+    const ViewableImageEntry entry = ViewableImageEntry::from_derived_heatmap(entry_id, output_path, pixel_size, secondary_header_label);
     m_entries_model.append_entry(entry);
     if (previous_entry_count != entry_count()) {
         Q_EMIT entry_count_changed();
-    }
-    if (previous_can_build_heatmap != can_build_heatmap()) {
-        Q_EMIT can_build_heatmap_changed();
     }
     return entry_id;
 }
@@ -60,7 +46,7 @@ ViewableImageEntry WorkspaceDocument::entry_at(int index) const { return m_entri
 
 bool WorkspaceDocument::remove_entry_by_id(const QUuid& entry_id) {
     for (int index = 0; index < entry_count(); ++index) {
-        if (m_entries_model.entry_at(index).entry_id() == entry_id) {
+        if (m_entries_model.entry_at(index).entry_id == entry_id) {
             return remove_entry_at(index);
         }
     }
@@ -72,18 +58,12 @@ bool WorkspaceDocument::remove_entry_at(int index) {
         return false;
     }
 
-    const bool previous_can_build_heatmap = can_build_heatmap();
-
     m_entries_model.remove_entry_at(index);
     Q_EMIT entry_count_changed();
-    if (previous_can_build_heatmap != can_build_heatmap()) {
-        Q_EMIT can_build_heatmap_changed();
-    }
     return true;
 }
 
 bool WorkspaceDocument::remove_derived_heatmap_entries() {
-    const bool previous_can_build_heatmap = can_build_heatmap();
     const int previous_entry_count = entry_count();
 
     for (int index = entry_count() - 1; index >= 0; --index) {
@@ -98,9 +78,6 @@ bool WorkspaceDocument::remove_derived_heatmap_entries() {
     }
 
     Q_EMIT entry_count_changed();
-    if (previous_can_build_heatmap != can_build_heatmap()) {
-        Q_EMIT can_build_heatmap_changed();
-    }
     return true;
 }
 
@@ -111,7 +88,7 @@ bool WorkspaceDocument::move_entry_by_id(const QUuid& entry_id, int direction) {
 
     int from = -1;
     for (int index = 0; index < entry_count(); ++index) {
-        if (m_entries_model.entry_at(index).entry_id() == entry_id) {
+        if (m_entries_model.entry_at(index).entry_id == entry_id) {
             from = index;
             break;
         }
@@ -154,14 +131,14 @@ bool WorkspaceDocument::can_build_heatmap() const noexcept {
         if (source_count > 2) {
             return false;
         }
-        if (entry.pixel_size().isEmpty()) {
+        if (entry.pixel_size.isEmpty()) {
             return false;
         }
         if (!first_size.isValid()) {
-            first_size = entry.pixel_size();
+            first_size = entry.pixel_size;
             continue;
         }
-        if (entry.pixel_size() != first_size) {
+        if (entry.pixel_size != first_size) {
             return false;
         }
     }

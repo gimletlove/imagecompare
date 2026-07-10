@@ -1,12 +1,11 @@
 #pragma once
 
-#include <QHash>
 #include <QObject>
-#include <QSet>
+#include <QString>
 #include <QStringList>
+#include <QUuid>
 
 #include "core/ComparisonJobQueue.h"
-#include "core/ImageRepository.h"
 #include "core/WorkspaceDocument.h"
 
 class ApplicationController : public QObject {
@@ -43,20 +42,12 @@ class ApplicationController : public QObject {
     void on_job_failed(QUuid job_id, const QString& error_text);
     void set_display_mode_and_reset_heatmap(DisplayMode mode);
     void clear_existing_derived_heatmaps();
-    [[nodiscard]] bool workspace_references_image_handle(const QUuid& handle_id) const;
-    [[nodiscard]] bool in_flight_heatmap_uses_image_handle(const QUuid& handle_id) const;
-    void release_image_handle_if_unused(const QUuid& handle_id);
-    void flush_deferred_image_handle_releases();
-    [[nodiscard]] QStringList tracked_generated_heatmap_paths_in_workspace() const;
+    void cancel_pending_heatmap();
     void delete_generated_heatmap_file(const QString& path) const;
-    void remove_tracked_generated_heatmap_path(const QString& path, bool immediate = false);
-    void remove_tracked_generated_heatmap_paths(const QStringList& paths, bool immediate = false);
+    void remove_generated_heatmap(bool immediate = false);
 
     WorkspaceDocument m_workspace;
-    ImageRepository m_repository;
     ComparisonJobQueue m_job_queue;
     QUuid m_pending_heatmap_job;
-    QHash<QUuid, QSet<QUuid>> m_in_flight_heatmap_handles_by_job;
-    QSet<QUuid> m_deferred_release_handles;
-    QSet<QString> m_generated_heatmap_paths;
+    QString m_generated_heatmap_path;
 };

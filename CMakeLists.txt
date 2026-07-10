@@ -14,67 +14,51 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
-set(CMAKE_AUTOUIC ON)
 add_compile_definitions(QT_NO_KEYWORDS)
 
 option(IMAGECOMPARE_FLATPAK "Enable Flatpak-specific portal integration" OFF)
 
-include(cmake/Dependencies.cmake)
+set(IMAGECOMPARE_QT_COMPONENTS Core Gui Qml Quick QuickControls2 Widgets)
+if(IMAGECOMPARE_FLATPAK)
+    list(APPEND IMAGECOMPARE_QT_COMPONENTS DBus)
+endif()
+
+find_package(Qt6 6.4 REQUIRED COMPONENTS ${IMAGECOMPARE_QT_COMPONENTS})
+if(IMAGECOMPARE_FLATPAK)
+    find_package(KF6CoreAddons REQUIRED)
+endif()
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(VIPSCPP REQUIRED IMPORTED_TARGET vips-cpp)
 
 if(QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
 endif()
 
-add_library(image_compare_core
+add_executable(imagecompare
+    src/app/main.cpp
     src/core/WorkspaceDocument.cpp
     src/core/ViewableImageEntry.cpp
     src/core/ViewableImageListModel.cpp
-    src/core/SourceIdentity.cpp
     src/core/ImageSource.cpp
-    src/core/ImageRepository.cpp
-    src/core/ComparisonService.cpp
     src/core/ComparisonJobQueue.cpp
+    src/app/ApplicationController.cpp
     src/core/ViewState.cpp
     src/core/TilePyramid.cpp
-    src/app/ApplicationController.cpp
     src/app/WindowDropFilter.cpp
 )
-qt_add_resources(image_compare_core image_compare_app_resources
+if(WIN32)
+    set_target_properties(imagecompare PROPERTIES WIN32_EXECUTABLE TRUE)
+endif()
+qt_add_resources(imagecompare image_compare_app_resources
     PREFIX "/"
     BASE ${CMAKE_CURRENT_SOURCE_DIR}/packaging/assets
     FILES
         packaging/assets/imagecompare.svg
 )
-target_include_directories(image_compare_core
-    PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/src
-)
-target_link_libraries(image_compare_core
-    PUBLIC
-        Qt6::Core
-        Qt6::Gui
-        Qt6::Quick
-        Qt6::Widgets
-        PkgConfig::VIPS
-        PkgConfig::VIPSCPP
-)
-if(IMAGECOMPARE_FLATPAK)
-    target_compile_definitions(image_compare_core PRIVATE IMAGECOMPARE_FLATPAK=1)
-    target_link_libraries(image_compare_core PUBLIC KF6::CoreAddons Qt6::DBus)
-endif()
-
-add_executable(imagecompare
-    src/app/main.cpp
-)
-if(WIN32)
-    set_target_properties(imagecompare PROPERTIES WIN32_EXECUTABLE TRUE)
-endif()
 set(qml_component_files
-    src/ui/qml/components/AppToolbar.qml
     src/ui/qml/components/ComparisonPaneItem.qml
     src/ui/qml/components/ComparisonWorkspace.qml
-    src/ui/qml/components/PaneHeader.qml
     src/ui/qml/components/PaneGridInteractionController.qml
     src/ui/qml/components/PanesGrid.qml
 )
@@ -104,17 +88,24 @@ qt_add_qml_module(imagecompare
 )
 target_include_directories(imagecompare
     PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/src
         ${CMAKE_CURRENT_SOURCE_DIR}/src/ui
 )
 target_link_libraries(imagecompare
     PRIVATE
-        image_compare_core
         Qt6::Core
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
         Qt6::QuickControls2
+        Qt6::Widgets
+        PkgConfig::VIPSCPP
 )
+
+if(IMAGECOMPARE_FLATPAK)
+    target_compile_definitions(imagecompare PRIVATE IMAGECOMPARE_FLATPAK=1)
+    target_link_libraries(imagecompare PRIVATE KF6::CoreAddons Qt6::DBus)
+endif()
 
 install(TARGETS imagecompare
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}

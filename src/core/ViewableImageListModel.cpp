@@ -17,13 +17,13 @@ QVariant ViewableImageListModel::data(const QModelIndex& index, int role) const 
     const auto& entry = m_entries[index.row()];
     switch (role) {
         case EntryIdRole:
-            return entry.entry_id();
+            return entry.entry_id;
         case ImagePathRole:
-            return entry.image_path();
+            return entry.image_path;
         case PrimaryHeaderRole:
-            return entry.primary_header_label();
+            return entry.primary_header_label;
         case SecondaryHeaderRole:
-            return entry.secondary_header_label();
+            return entry.secondary_header_label;
         case IsSourceRole:
             return entry.is_source();
         default:

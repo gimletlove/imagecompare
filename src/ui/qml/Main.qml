@@ -22,11 +22,6 @@ ApplicationWindow {
     ComparisonWorkspace {
         anchors.fill: parent
         controller: application_controller
-        onOpen_requested: {
-            if (application_controller) {
-                application_controller.open_images_with_native_dialog();
-            }
-        }
     }
 
     Rectangle {

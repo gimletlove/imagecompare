@@ -6,79 +6,16 @@ Item {
     id: root
     focus: true
     property var controller
-    signal open_requested()
-
-    function toggle_display_mode() {
-        if (!root.controller) {
-            return false;
-        }
-        if (!panes_grid.can_best_fit_action) {
-            return false;
-        }
-        if (root.controller.display_mode === 0) {
-            root.controller.set_display_mode_faithful();
-            return true;
-        }
-        root.controller.set_display_mode_strict_raw();
-        return true;
-    }
-
-    function toggle_overlay_mode() {
-        if (!panes_grid.can_overlay_action) {
-            return false;
-        }
-        return panes_grid.toggle_overlay_mode();
-    }
-
-    function cycle_overlay_forward() {
-        return panes_grid.cycle_overlay_pane(1);
-    }
-
-    function cycle_overlay_backward() {
-        return panes_grid.cycle_overlay_pane(-1);
-    }
-
-    function toggle_match_zoom() {
-        if (!panes_grid.can_match_zoom_action) {
-            return false;
-        }
-        panes_grid.match_zoom_enabled = !panes_grid.match_zoom_enabled;
-        if (panes_grid.match_zoom_enabled) {
-            panes_grid.reconcile_match_zoom_now();
-        } else {
-            panes_grid.restore_numeric_zoom_now();
-        }
-        return panes_grid.match_zoom_enabled;
-    }
-
-    function apply_best_fit() {
-        if (!panes_grid.can_best_fit_action) {
-            return false;
-        }
-        panes_grid.set_best_fit();
-        return true;
-    }
-
-    function toggle_zoom_fit() {
-        if (!panes_grid.can_best_fit_action) {
-            return false;
-        }
-        return panes_grid.toggle_zoom_fit();
-    }
-
-    function build_heatmap() {
-        if (!root.controller || !root.controller.workspace || !root.controller.workspace.can_build_heatmap) {
-            return false;
-        }
-        root.controller.build_heatmap();
-        return true;
-    }
 
     Action {
         id: open_action
         shortcut: "O"
         text: "Open (o)"
-        onTriggered: root.open_requested()
+        onTriggered: {
+            if (root.controller) {
+                root.controller.open_images_with_native_dialog()
+            }
+        }
     }
 
     Action {
@@ -88,7 +25,7 @@ Item {
         enabled: root.controller && root.controller.workspace
             ? !root.controller.heatmap_in_progress && root.controller.workspace.can_build_heatmap
             : false
-        onTriggered: root.build_heatmap()
+        onTriggered: root.controller.build_heatmap()
     }
 
     Action {
@@ -96,7 +33,13 @@ Item {
         shortcut: "R"
         text: (root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful") + " (r)"
         enabled: panes_grid.can_best_fit_action
-        onTriggered: root.toggle_display_mode()
+        onTriggered: {
+            if (root.controller.display_mode === 0) {
+                root.controller.set_display_mode_faithful()
+            } else {
+                root.controller.set_display_mode_strict_raw()
+            }
+        }
     }
 
     Action {
@@ -104,7 +47,7 @@ Item {
         shortcut: "F"
         text: panes_grid.zoom_readout + " (f)"
         enabled: panes_grid.can_best_fit_action
-        onTriggered: root.toggle_zoom_fit()
+        onTriggered: panes_grid.toggle_zoom_fit()
     }
 
     Action {
@@ -114,7 +57,7 @@ Item {
         enabled: panes_grid.can_overlay_action
         checkable: true
         checked: panes_grid.overlay_mode_enabled
-        onTriggered: root.toggle_overlay_mode()
+        onTriggered: panes_grid.toggle_overlay_mode()
     }
 
     Action {
@@ -124,7 +67,14 @@ Item {
         enabled: panes_grid.can_match_zoom_action
         checkable: true
         checked: panes_grid.match_zoom_enabled
-        onTriggered: root.toggle_match_zoom()
+        onTriggered: {
+            panes_grid.match_zoom_enabled = !panes_grid.match_zoom_enabled
+            if (panes_grid.match_zoom_enabled) {
+                panes_grid.reconcile_match_zoom_now()
+            } else {
+                panes_grid.restore_numeric_zoom_now()
+            }
+        }
     }
 
     Action {
@@ -173,14 +123,14 @@ Item {
         id: cycle_forward_action
         shortcut: "Right"
         enabled: panes_grid.overlay_mode_enabled
-        onTriggered: root.cycle_overlay_forward()
+        onTriggered: panes_grid.cycle_overlay_pane(1)
     }
 
     Action {
         id: cycle_backward_action
         shortcut: "Left"
         enabled: panes_grid.overlay_mode_enabled
-        onTriggered: root.cycle_overlay_backward()
+        onTriggered: panes_grid.cycle_overlay_pane(-1)
     }
 
     ColumnLayout {
@@ -192,14 +142,55 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 34
 
-            AppToolbar {
+            RowLayout {
                 anchors.fill: parent
-                open_action: open_action
-                heatmap_action: heatmap_action
-                display_mode_action: display_mode_action
-                zoom_fit_action: zoom_fit_action
-                overlay_action: overlay_action
-                match_zoom_action: match_zoom_action
+                spacing: 4
+
+                ToolButton {
+                    action: open_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Import images into the workspace"
+                    focusPolicy: Qt.NoFocus
+                }
+
+                Item {
+                    Layout.fillWidth: true
+                }
+
+                ToolButton {
+                    action: heatmap_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Build a heatmap of the level of difference from two images"
+                    focusPolicy: Qt.NoFocus
+                }
+
+                ToolButton {
+                    action: display_mode_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Faithful uses color profile metadata; Raw ignores color profile metadata"
+                    focusPolicy: Qt.NoFocus
+                }
+
+                ToolButton {
+                    action: zoom_fit_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Toggle best fit and 100 percent zoom (F)"
+                    focusPolicy: Qt.NoFocus
+                }
+
+                ToolButton {
+                    action: overlay_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Stack image panes and cycle with arrow keys"
+                    focusPolicy: Qt.NoFocus
+                }
+
+                ToolButton {
+                    action: match_zoom_action
+                    ToolTip.visible: hovered
+                    ToolTip.text: "Normalize zoom and pan across different image sizes"
+                    focusPolicy: Qt.NoFocus
+                }
             }
         }
 
@@ -229,7 +220,7 @@ Item {
         target: root.controller && root.controller.workspace ? root.controller.workspace : null
         function onEntry_count_changed() {
             if (root.controller && root.controller.workspace && root.controller.workspace.entry_count > 0) {
-                Qt.callLater(root.apply_best_fit);
+                Qt.callLater(() => panes_grid.set_best_fit())
             }
         }
     }

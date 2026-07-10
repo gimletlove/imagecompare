@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Layouts
 import ImageCompare 1.0
 
 Item {
@@ -108,14 +109,44 @@ Item {
         }
     }
 
-    PaneHeader {
+    Item {
         id: pane_header
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        primary_text: root.primary_header_text
-        secondary_text: root.secondary_header_text
-        onRemove_requested: root.remove_requested(root.entry_id_value)
+        implicitHeight: 28
+        height: implicitHeight
+
+        readonly property bool has_secondary_in_display: String(root.secondary_header_text).trim().length > 0
+        readonly property string full_header_tool_tip_text: has_secondary_in_display
+            ? String(root.primary_header_text) + " • " + String(root.secondary_header_text).trim()
+            : String(root.primary_header_text)
+
+        RowLayout {
+            anchors.fill: parent
+            spacing: 4
+
+            Label {
+                text: pane_header.full_header_tool_tip_text
+                elide: Text.ElideMiddle
+                HoverHandler {
+                    id: primary_label_hover
+                }
+                ToolTip.visible: primary_label_hover.hovered
+                ToolTip.text: pane_header.full_header_tool_tip_text
+                Layout.fillWidth: true
+            }
+
+            ToolButton {
+                text: "x"
+                implicitWidth: 22
+                implicitHeight: 22
+                focusPolicy: Qt.NoFocus
+                ToolTip.visible: hovered
+                ToolTip.text: "Remove image"
+                onClicked: root.remove_requested(root.entry_id_value)
+            }
+        }
     }
 
     Rectangle {

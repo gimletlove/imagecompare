@@ -12,7 +12,7 @@ class WorkspaceDocument : public QObject {
     Q_OBJECT
     Q_PROPERTY(int entry_count READ entry_count NOTIFY entry_count_changed)
     Q_PROPERTY(DisplayMode display_mode READ display_mode WRITE set_display_mode NOTIFY display_mode_changed)
-    Q_PROPERTY(bool can_build_heatmap READ can_build_heatmap NOTIFY can_build_heatmap_changed)
+    Q_PROPERTY(bool can_build_heatmap READ can_build_heatmap NOTIFY entry_count_changed)
     Q_PROPERTY(ViewableImageListModel* entries_model READ entries_model CONSTANT)
 
    public:
@@ -24,9 +24,8 @@ class WorkspaceDocument : public QObject {
 
     explicit WorkspaceDocument(QObject* parent = nullptr);
 
-    [[nodiscard]] QUuid add_source_entry(const QUuid& image_handle_id, const QString& path = {}, const QSize& pixel_size = {});
-    [[nodiscard]] QUuid add_derived_entry(const QUuid& image_handle_id, const QString& output_path, const QSize& pixel_size,
-                                          const QString& secondary_header_label = {});
+    [[nodiscard]] QUuid add_source_entry(const QString& path, const QSize& pixel_size);
+    [[nodiscard]] QUuid add_derived_entry(const QString& output_path, const QSize& pixel_size, const QString& secondary_header_label = {});
 
     [[nodiscard]] int entry_count() const noexcept { return m_entries_model.entry_count(); }
     [[nodiscard]] DisplayMode display_mode() const noexcept { return m_display_mode; }
@@ -42,7 +41,6 @@ class WorkspaceDocument : public QObject {
    Q_SIGNALS:
     void entry_count_changed();
     void display_mode_changed();
-    void can_build_heatmap_changed();
 
    private:
     static constexpr int k_max_entries = 10;

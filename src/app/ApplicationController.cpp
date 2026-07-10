@@ -15,6 +15,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QScopeGuard>
 #include <QSet>
 #include <QStandardPaths>
 #include <QString>
@@ -25,6 +26,9 @@
 #endif
 #include <QVector>
 #include <exception>
+#include <utility>
+
+#include "core/ImageSource.h"
 
 #ifdef IMAGECOMPARE_FLATPAK
 #include <sys/types.h>
@@ -88,22 +92,20 @@ namespace {
 #endif
 }  // namespace
 
-ApplicationController::ApplicationController(QObject* parent) : QObject(parent), m_workspace(this), m_job_queue(m_repository, this) {
+ApplicationController::ApplicationController(QObject* parent) : QObject(parent), m_workspace(this), m_job_queue(this) {
     connect(&m_job_queue, &ComparisonJobQueue::job_finished, this, &ApplicationController::on_job_finished);
     connect(&m_job_queue, &ComparisonJobQueue::job_failed, this, &ApplicationController::on_job_failed);
     connect(&m_workspace, &WorkspaceDocument::display_mode_changed, this, &ApplicationController::display_mode_changed);
 }
 
-ApplicationController::~ApplicationController() {
-    remove_tracked_generated_heatmap_paths(QStringList(m_generated_heatmap_paths.begin(), m_generated_heatmap_paths.end()), true);
-}
+ApplicationController::~ApplicationController() { remove_generated_heatmap(true); }
 
 void ApplicationController::import_image_paths(const QStringList& paths) {
-    QSet<QUuid> existing_source_handles;
+    QSet<QString> existing_source_paths;
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
         const auto entry = m_workspace.entry_at(index);
         if (entry.is_source()) {
-            existing_source_handles.insert(entry.image_handle_id());
+            existing_source_paths.insert(ImageSource(entry.image_path).path());
         }
     }
 
@@ -118,25 +120,20 @@ void ApplicationController::import_image_paths(const QStringList& paths) {
             normalized_path = input_url.toLocalFile();
         }
 
-        if (!ImageSource::supported_image_path(normalized_path)) {
-            continue;
-        }
-
-        QUuid handle_id;
         try {
-            handle_id = m_repository.load(normalized_path);
-            if (existing_source_handles.contains(handle_id)) {
+            if (!ImageSource::supported_image_path(normalized_path)) {
                 continue;
             }
-            const auto source = m_repository.image(handle_id);
-            const QSize pixel_size = source->pixel_size();
-            if (m_workspace.add_source_entry(handle_id, normalized_path, pixel_size).isNull()) {
-                release_image_handle_if_unused(handle_id);
+            const ImageSource source(normalized_path);
+            if (existing_source_paths.contains(source.path())) {
                 continue;
             }
-            existing_source_handles.insert(handle_id);
+            if (m_workspace.add_source_entry(normalized_path, source.pixel_size()).isNull()) {
+                continue;
+            }
+            existing_source_paths.insert(source.path());
+            cancel_pending_heatmap();
         } catch (const std::exception& ex) {
-            release_image_handle_if_unused(handle_id);
             qWarning().noquote() << "Failed to import image path" << normalized_path << ":" << ex.what();
         }
     }
@@ -155,28 +152,29 @@ void ApplicationController::open_images_with_native_dialog() {
 
 bool ApplicationController::remove_workspace_entry_by_id(const QString& entry_id) {
     const QUuid parsed_entry_id(entry_id);
-    QString generated_path_to_remove;
-    QUuid image_handle_id_to_remove;
+    QString path_to_remove;
+    bool source_to_remove = false;
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
         const auto entry = m_workspace.entry_at(index);
-        if (entry.entry_id() != parsed_entry_id) {
+        if (entry.entry_id != parsed_entry_id) {
             continue;
         }
-        image_handle_id_to_remove = entry.image_handle_id();
-        if (entry.is_derived()) {
-            generated_path_to_remove = entry.image_path();
-        }
+        path_to_remove = entry.image_path;
+        source_to_remove = entry.is_source();
         break;
     }
 
     const bool removed = m_workspace.remove_entry_by_id(parsed_entry_id);
-    if (removed && !generated_path_to_remove.isEmpty()) {
-        remove_tracked_generated_heatmap_path(generated_path_to_remove);
+    if (!removed) {
+        return false;
     }
-    if (removed) {
-        release_image_handle_if_unused(image_handle_id_to_remove);
+    if (source_to_remove) {
+        ImageSource::drop_cached_render_data(path_to_remove);
+        cancel_pending_heatmap();
+    } else if (path_to_remove == m_generated_heatmap_path) {
+        remove_generated_heatmap();
     }
-    return removed;
+    return true;
 }
 
 bool ApplicationController::move_workspace_entry_by_id(const QString& entry_id, int direction) {
@@ -213,8 +211,8 @@ bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const 
     QString heatmap_path;
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
         const auto entry = m_workspace.entry_at(index);
-        if (entry.entry_id() == parsed_entry_id && entry.is_derived()) {
-            heatmap_path = entry.image_path();
+        if (entry.entry_id == parsed_entry_id && entry.is_derived()) {
+            heatmap_path = entry.image_path;
             break;
         }
     }
@@ -263,25 +261,9 @@ void ApplicationController::set_display_mode_and_reset_heatmap(DisplayMode mode)
 }
 
 void ApplicationController::clear_existing_derived_heatmaps() {
-    const bool was_heatmap_in_progress = heatmap_in_progress();
-    const QStringList paths_to_remove = tracked_generated_heatmap_paths_in_workspace();
-    QVector<QUuid> handles_to_release;
-    for (int index = 0; index < m_workspace.entry_count(); ++index) {
-        const auto entry = m_workspace.entry_at(index);
-        if (entry.is_derived()) {
-            handles_to_release.push_back(entry.image_handle_id());
-        }
-    }
-
     static_cast<void>(m_workspace.remove_derived_heatmap_entries());
-    m_pending_heatmap_job = QUuid{};
-    remove_tracked_generated_heatmap_paths(paths_to_remove);
-    for (const QUuid& handle_id : handles_to_release) {
-        release_image_handle_if_unused(handle_id);
-    }
-    if (was_heatmap_in_progress != heatmap_in_progress()) {
-        Q_EMIT heatmap_in_progress_changed();
-    }
+    remove_generated_heatmap();
+    cancel_pending_heatmap();
 }
 
 void ApplicationController::build_heatmap() {
@@ -289,7 +271,6 @@ void ApplicationController::build_heatmap() {
         return;
     }
 
-    const bool was_heatmap_in_progress = heatmap_in_progress();
     QVector<ViewableImageEntry> source_images;
     source_images.reserve(2);
     for (int index = 0; index < m_workspace.entry_count() && source_images.size() < 2; ++index) {
@@ -298,148 +279,64 @@ void ApplicationController::build_heatmap() {
             source_images.push_back(entry);
         }
     }
-    if (source_images.size() != 2 || source_images[0].image_handle_id().isNull() || source_images[1].image_handle_id().isNull()) {
+    if (source_images.size() != 2 || source_images[0].image_path.isEmpty() || source_images[1].image_path.isEmpty()) {
         return;
     }
 
     clear_existing_derived_heatmaps();
-    const QUuid job_id = m_job_queue.enqueue({
-        .first_image_handle_id = source_images[0].image_handle_id(),
-        .second_image_handle_id = source_images[1].image_handle_id(),
+    m_pending_heatmap_job = m_job_queue.enqueue({
+        .first_image_path = source_images[0].image_path,
+        .second_image_path = source_images[1].image_path,
         .display_mode = m_workspace.display_mode(),
     });
-    m_pending_heatmap_job = job_id;
-    m_in_flight_heatmap_handles_by_job.insert(job_id, {source_images[0].image_handle_id(), source_images[1].image_handle_id()});
-    if (was_heatmap_in_progress != heatmap_in_progress()) {
-        Q_EMIT heatmap_in_progress_changed();
-    }
+    Q_EMIT heatmap_in_progress_changed();
 }
 
 WorkspaceDocument* ApplicationController::workspace() noexcept { return &m_workspace; }
 
 void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult& result) {
-    const bool was_heatmap_in_progress = heatmap_in_progress();
-    const auto emit_heatmap_state_if_changed = [this, was_heatmap_in_progress]() {
-        if (was_heatmap_in_progress != heatmap_in_progress()) {
-            Q_EMIT heatmap_in_progress_changed();
-        }
-    };
-    m_in_flight_heatmap_handles_by_job.remove(job_id);
-    flush_deferred_image_handle_releases();
     if (m_pending_heatmap_job != job_id) {
         if (result.success && !result.output_path.isEmpty()) {
             delete_generated_heatmap_file(result.output_path);
         }
-        emit_heatmap_state_if_changed();
         return;
     }
-    m_pending_heatmap_job = QUuid{};
+    cancel_pending_heatmap();
     if (!result.success || result.output_path.isEmpty()) {
-        emit_heatmap_state_if_changed();
         return;
     }
 
+    auto output_guard = qScopeGuard([this, &result] { delete_generated_heatmap_file(result.output_path); });
     try {
-        const QUuid result_handle_id = m_repository.load(result.output_path);
-        const auto result_source = m_repository.image(result_handle_id);
+        const ImageSource result_source(result.output_path);
         const QString summary_label = QStringLiteral("overall dE00 %1 • peak dE00 %2")
                                           .arg(result.summary.overall_de00, 0, 'f', 2)
                                           .arg(result.summary.peak_de00, 0, 'f', 2);
 
-        const QUuid entry_id =
-            m_workspace.add_derived_entry(result_handle_id, result.output_path, result_source->pixel_size(), summary_label);
-        if (entry_id.isNull()) {
-            delete_generated_heatmap_file(result.output_path);
-            static_cast<void>(m_repository.release(result_handle_id));
-            emit_heatmap_state_if_changed();
+        if (m_workspace.add_derived_entry(result.output_path, result_source.pixel_size(), summary_label).isNull()) {
             return;
         }
-        m_generated_heatmap_paths.insert(result.output_path);
+        m_generated_heatmap_path = result.output_path;
+        output_guard.dismiss();
     } catch (const std::exception& ex) {
-        if (!result.output_path.isEmpty()) {
-            delete_generated_heatmap_file(result.output_path);
-        }
         qWarning().noquote() << "Failed to load generated heatmap result" << result.output_path << ":" << ex.what();
     }
-    emit_heatmap_state_if_changed();
 }
 
 void ApplicationController::on_job_failed(QUuid job_id, const QString& error_text) {
-    const bool was_heatmap_in_progress = heatmap_in_progress();
     if (m_pending_heatmap_job == job_id) {
-        m_pending_heatmap_job = QUuid{};
+        cancel_pending_heatmap();
     }
-    m_in_flight_heatmap_handles_by_job.remove(job_id);
-    flush_deferred_image_handle_releases();
     qWarning().noquote() << "Heatmap job failed for" << job_id.toString(QUuid::WithoutBraces) << ":"
                          << (error_text.isEmpty() ? QStringLiteral("unknown error") : error_text);
-    if (was_heatmap_in_progress != heatmap_in_progress()) {
-        Q_EMIT heatmap_in_progress_changed();
-    }
 }
 
-bool ApplicationController::workspace_references_image_handle(const QUuid& handle_id) const {
-    if (handle_id.isNull()) {
-        return false;
-    }
-
-    for (int index = 0; index < m_workspace.entry_count(); ++index) {
-        if (m_workspace.entry_at(index).image_handle_id() == handle_id) {
-            return true;
-        }
-    }
-    return false;
-}
-
-bool ApplicationController::in_flight_heatmap_uses_image_handle(const QUuid& handle_id) const {
-    if (handle_id.isNull()) {
-        return false;
-    }
-
-    for (auto it = m_in_flight_heatmap_handles_by_job.cbegin(); it != m_in_flight_heatmap_handles_by_job.cend(); ++it) {
-        if (it.value().contains(handle_id)) {
-            return true;
-        }
-    }
-    return false;
-}
-
-void ApplicationController::release_image_handle_if_unused(const QUuid& handle_id) {
-    if (handle_id.isNull() || workspace_references_image_handle(handle_id)) {
+void ApplicationController::cancel_pending_heatmap() {
+    if (!heatmap_in_progress()) {
         return;
     }
-    if (in_flight_heatmap_uses_image_handle(handle_id)) {
-        m_deferred_release_handles.insert(handle_id);
-        return;
-    }
-    m_deferred_release_handles.remove(handle_id);
-    static_cast<void>(m_repository.release(handle_id));
-}
-
-void ApplicationController::flush_deferred_image_handle_releases() {
-    const auto deferred_handles = m_deferred_release_handles.values();
-    for (const QUuid& handle_id : deferred_handles) {
-        if (workspace_references_image_handle(handle_id) || in_flight_heatmap_uses_image_handle(handle_id)) {
-            continue;
-        }
-        m_deferred_release_handles.remove(handle_id);
-        static_cast<void>(m_repository.release(handle_id));
-    }
-}
-
-QStringList ApplicationController::tracked_generated_heatmap_paths_in_workspace() const {
-    QStringList paths;
-    for (int index = 0; index < m_workspace.entry_count(); ++index) {
-        const auto entry = m_workspace.entry_at(index);
-        if (!entry.is_derived()) {
-            continue;
-        }
-        const QString path = entry.image_path();
-        if (m_generated_heatmap_paths.contains(path)) {
-            paths.push_back(path);
-        }
-    }
-    return paths;
+    m_pending_heatmap_job = {};
+    Q_EMIT heatmap_in_progress_changed();
 }
 
 void ApplicationController::delete_generated_heatmap_file(const QString& path) const {
@@ -451,22 +348,15 @@ void ApplicationController::delete_generated_heatmap_file(const QString& path) c
     }
 }
 
-void ApplicationController::remove_tracked_generated_heatmap_path(const QString& path, bool immediate) {
-    if (!m_generated_heatmap_paths.remove(path)) {
-        return;
-    }
+void ApplicationController::remove_generated_heatmap(bool immediate) {
+    const QString path = std::exchange(m_generated_heatmap_path, {});
     if (path.isEmpty()) {
         return;
     }
+    ImageSource::drop_cached_render_data(path);
     if (immediate) {
         delete_generated_heatmap_file(path);
         return;
     }
     QMetaObject::invokeMethod(this, [this, path]() { delete_generated_heatmap_file(path); }, Qt::QueuedConnection);
-}
-
-void ApplicationController::remove_tracked_generated_heatmap_paths(const QStringList& paths, bool immediate) {
-    for (const QString& path : paths) {
-        remove_tracked_generated_heatmap_path(path, immediate);
-    }
 }
