@@ -1,6 +1,7 @@
 #include "core/ViewState.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
     constexpr double k_min_zoom_factor = 0.01;
@@ -8,6 +9,9 @@ namespace {
 }  // namespace
 
 void ViewState::set_zoom_factor(double value) {
+    if (!std::isfinite(value)) {
+        return;
+    }
     m_zoom_factor = std::clamp(value, k_min_zoom_factor, k_max_zoom_factor);
     clamp_center_to_image_bounds();
 }

@@ -15,6 +15,7 @@
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
+#include <QSaveFile>
 #include <QScopeGuard>
 #include <QSet>
 #include <QStandardPaths>
@@ -223,12 +224,33 @@ bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const 
     if (QFileInfo(heatmap_path).absoluteFilePath() == QFileInfo(output_path).absoluteFilePath()) {
         return true;
     }
-    if (QFileInfo::exists(output_path) && !QFile::remove(output_path)) {
-        qWarning().noquote() << "Failed to overwrite exported heatmap" << output_path;
+    QFile input(heatmap_path);
+    QSaveFile output(output_path);
+    output.setDirectWriteFallback(true);
+    if (!input.open(QIODevice::ReadOnly) || !output.open(QIODevice::WriteOnly)) {
+        qWarning().noquote() << "Failed to open heatmap export" << heatmap_path << "or" << output_path;
         return false;
     }
-    if (!QFile::copy(heatmap_path, output_path)) {
-        qWarning().noquote() << "Failed to export heatmap" << heatmap_path << "to" << output_path;
+
+    constexpr qsizetype k_copy_buffer_size = 64 * 1024;
+    while (true) {
+        const QByteArray data = input.read(k_copy_buffer_size);
+        if (data.isEmpty()) {
+            if (input.error() == QFileDevice::NoError) {
+                break;
+            }
+            output.cancelWriting();
+            qWarning().noquote() << "Failed to read heatmap" << heatmap_path;
+            return false;
+        }
+        if (output.write(data) != data.size()) {
+            output.cancelWriting();
+            qWarning().noquote() << "Failed to export heatmap" << heatmap_path << "to" << output_path;
+            return false;
+        }
+    }
+    if (!output.commit()) {
+        qWarning().noquote() << "Failed to commit heatmap export to" << output_path;
         return false;
     }
     return true;

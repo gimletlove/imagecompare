@@ -1,5 +1,3 @@
-#include <vips/vips.h>
-
 #include <QApplication>
 #include <QIcon>
 #include <QQmlApplicationEngine>
@@ -37,7 +35,5 @@ int main(int argc, char* argv[]) {
         root_window->installEventFilter(window_drop_filter);
     }
 
-    const int exit_code = app.exec();
-    vips_shutdown();
-    return exit_code;
+    return app.exec();
 }
