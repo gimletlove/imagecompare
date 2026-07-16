@@ -10,15 +10,15 @@
     <name>gimletlove</name>
   </developer>
   <description>
-    <p>Image Compare is a desktop image comparison and visual diff tool for inspecting two or more images side by side, in a stacked view, or with a heatmap of perceptual differences.</p>
-    <p>Use it to compare screenshots, rendered images, exports, design revisions, before and after edits, and subtle visual differences between image versions.</p>
+    <p>Image Compare is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, stacked, or in a grid with synchronized zoom and pan, and generate perceptual heatmaps to highlight visual differences.</p>
+    <p>Use it to choose the best-quality copy, inspect compression artifacts, scans, and exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.</p>
     <ul>
-      <li>Side-by-side and stacked comparison</li>
-      <li>Grid layout when four or more images are loaded</li>
-      <li>Synchronized zoom and pan across images with different dimensions</li>
-      <li>Perceptual heatmap generation and export for two same-size images</li>
-      <li>Faithful color-profile rendering with an optional raw display mode</li>
-      <li>Multiple image formats with fast loading through Qt6 and libvips</li>
+      <li>Open images by drag and drop, file picker, command line, or file manager</li>
+      <li>Flip between images in stacked view or inspect several images in a grid</li>
+      <li>Generate and export perceptual heatmaps for two images</li>
+      <li>Switch between embedded color-profile rendering and raw rendering</li>
+      <li>Copy paths, open containing folders, reorder images, and close panes</li>
+      <li>Load, zoom, and pan efficiently with Qt6 and libvips</li>
     </ul>
   </description>
   <screenshots>
@@ -32,6 +32,16 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2.0" date="2026-07-16">
+      <description>
+        <ul>
+          <li>Improve rendering for significantly reduced memory usage and cpu usage during panning/zooming</li>
+          <li>Load images up to 4x faster with half peak memory usage</li>
+          <li>Generate heatmaps 30% faster with 55% lower peak memory usage</li>
+          <li>Improve QML compilation, workspace controls, image export, and application shutdown handling</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.1.5" date="2026-07-10">
       <description>
         <ul>
