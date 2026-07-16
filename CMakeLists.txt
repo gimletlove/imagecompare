@@ -44,7 +44,6 @@ add_executable(imagecompare
     src/core/ComparisonJobQueue.cpp
     src/app/ApplicationController.cpp
     src/core/ViewState.cpp
-    src/core/TilePyramid.cpp
     src/app/WindowDropFilter.cpp
 )
 if(WIN32)
@@ -77,8 +76,8 @@ qt_add_qml_module(imagecompare
     VERSION 1.0
     RESOURCE_PREFIX /qt/qml
     SOURCES
-        src/ui/TiledImageItem.h
-        src/ui/TiledImageItem.cpp
+        src/ui/ImageItem.h
+        src/ui/ImageItem.cpp
     QML_FILES
         src/ui/qml/Main.qml
         ${qml_component_files}

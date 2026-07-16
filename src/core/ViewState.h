@@ -13,7 +13,6 @@ class ViewState {
     [[nodiscard]] double zoom_factor() const noexcept;
     [[nodiscard]] QPointF image_center() const noexcept;
     [[nodiscard]] QSizeF viewport_size() const noexcept;
-    [[nodiscard]] QSizeF image_size() const noexcept;
     [[nodiscard]] QPointF viewport_center() const noexcept;
     [[nodiscard]] QPointF viewport_to_image_point(const QPointF& viewport_point) const;
     void pan_by_viewport_delta(const QPointF& viewport_delta);

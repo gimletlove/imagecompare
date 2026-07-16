@@ -151,27 +151,13 @@ void ApplicationController::open_images_with_native_dialog() {
 }
 
 bool ApplicationController::remove_workspace_entry_by_id(const QString& entry_id) {
-    const QUuid parsed_entry_id(entry_id);
-    QString path_to_remove;
-    bool source_to_remove = false;
-    for (int index = 0; index < m_workspace.entry_count(); ++index) {
-        const auto entry = m_workspace.entry_at(index);
-        if (entry.entry_id != parsed_entry_id) {
-            continue;
-        }
-        path_to_remove = entry.image_path;
-        source_to_remove = entry.is_source();
-        break;
-    }
-
-    const bool removed = m_workspace.remove_entry_by_id(parsed_entry_id);
-    if (!removed) {
+    const auto removed_entry = m_workspace.take_entry_by_id(QUuid(entry_id));
+    if (!removed_entry) {
         return false;
     }
-    if (source_to_remove) {
-        ImageSource::drop_cached_render_data(path_to_remove);
+    if (removed_entry->is_source()) {
         cancel_pending_heatmap();
-    } else if (path_to_remove == m_generated_heatmap_path) {
+    } else if (removed_entry->image_path == m_generated_heatmap_path) {
         remove_generated_heatmap();
     }
     return true;
@@ -353,7 +339,6 @@ void ApplicationController::remove_generated_heatmap(bool immediate) {
     if (path.isEmpty()) {
         return;
     }
-    ImageSource::drop_cached_render_data(path);
     if (immediate) {
         delete_generated_heatmap_file(path);
         return;

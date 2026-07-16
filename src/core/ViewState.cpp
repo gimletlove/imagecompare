@@ -33,8 +33,6 @@ QPointF ViewState::image_center() const noexcept { return m_image_center; }
 
 QSizeF ViewState::viewport_size() const noexcept { return m_viewport_size; }
 
-QSizeF ViewState::image_size() const noexcept { return m_image_size; }
-
 QPointF ViewState::viewport_center() const noexcept { return QPointF(m_viewport_size.width() / 2.0, m_viewport_size.height() / 2.0); }
 
 QPointF ViewState::viewport_to_image_point(const QPointF& viewport_point) const {

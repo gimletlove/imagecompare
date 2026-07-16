@@ -4,6 +4,7 @@
 #include <QSize>
 #include <QString>
 #include <QUuid>
+#include <optional>
 
 #include "core/ViewableImageEntry.h"
 #include "core/ViewableImageListModel.h"
@@ -33,8 +34,7 @@ class WorkspaceDocument : public QObject {
     [[nodiscard]] ViewableImageEntry entry_at(int index) const;
     [[nodiscard]] ViewableImageListModel* entries_model() noexcept { return &m_entries_model; }
     [[nodiscard]] bool remove_derived_heatmap_entries();
-    [[nodiscard]] bool remove_entry_by_id(const QUuid& entry_id);
-    [[nodiscard]] bool remove_entry_at(int index);
+    [[nodiscard]] std::optional<ViewableImageEntry> take_entry_by_id(const QUuid& entry_id);
     [[nodiscard]] bool move_entry_by_id(const QUuid& entry_id, int direction);
     void set_display_mode(DisplayMode mode);
 

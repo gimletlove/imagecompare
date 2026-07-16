@@ -2,54 +2,29 @@
 
 #include <vips/vips.h>
 
-#include <QCache>
 #include <QFileInfo>
+#include <QThread>
+#include <algorithm>
 #include <cstddef>
 #include <exception>
-#include <memory>
 #include <mutex>
 #include <stdexcept>
 #include <vips/vips8>
 
 namespace {
-    constexpr int k_tile_cache_tile_size = 256;
-    constexpr int k_tile_cache_max_tiles = 512;
-    constexpr qsizetype k_max_cached_images = 10;
-
     void ensure_vips_initialized() {
         static std::once_flag init_flag;
         std::call_once(init_flag, []() {
             if (VIPS_INIT("imagecompare") != 0) {
                 throw std::runtime_error("failed to initialize libvips");
             }
+            if (!qEnvironmentVariableIsSet("VIPS_CONCURRENCY")) {
+                vips_concurrency_set(std::min(8, std::max(1, QThread::idealThreadCount())));
+            }
         });
     }
 
-    struct RenderCacheKey {
-        QString normalized_path;
-        bool ignore_color_profile = false;
-
-        friend bool operator==(const RenderCacheKey&, const RenderCacheKey&) = default;
-    };
-
-    std::size_t qHash(const RenderCacheKey& key, std::size_t seed = 0) noexcept {
-        return qHashMulti(seed, key.normalized_path, key.ignore_color_profile);
-    }
-
-    vips::VImage add_random_access_tile_cache(const vips::VImage& image) {
-        return image.tilecache(vips::VImage::option()
-                                   ->set("tile_width", k_tile_cache_tile_size)
-                                   ->set("tile_height", k_tile_cache_tile_size)
-                                   ->set("max_tiles", k_tile_cache_max_tiles)
-                                   ->set("threaded", true)
-                                   ->set("persistent", true));
-    }
-
-    vips::VImage load_image_for_spec(const QString& path, const RenderSpec& spec, bool random_access) {
-        vips::VImage image = random_access ? vips::VImage::new_from_file(path.toUtf8().constData(),
-                                                                         vips::VImage::option()->set("access", VIPS_ACCESS_RANDOM))
-                                           : vips::VImage::new_from_file(path.toUtf8().constData());
-        image = image.autorot();
+    vips::VImage apply_render_spec(vips::VImage image, const RenderSpec& spec) {
         if (!spec.ignore_color_profile) {
             const bool has_embedded_icc_profile = image.get_typeof("icc-profile-data") != 0;
             if (has_embedded_icc_profile) {
@@ -131,54 +106,6 @@ namespace {
         return result;
     }
 
-    std::mutex& render_cache_mutex() {
-        static std::mutex cache_mutex;
-        return cache_mutex;
-    }
-
-    QCache<RenderCacheKey, vips::VImage>& render_cache() {
-        static QCache<RenderCacheKey, vips::VImage> cache(k_max_cached_images);
-        return cache;
-    }
-
-    vips::VImage cached_image_for_spec(const QString& normalized_path, const RenderSpec& spec) {
-        const RenderCacheKey cache_key{normalized_path, spec.ignore_color_profile};
-        {
-            std::lock_guard lock(render_cache_mutex());
-            if (const auto* cached = render_cache().object(cache_key)) {
-                return *cached;
-            }
-        }
-
-        vips::VImage loaded_image = add_random_access_tile_cache(load_image_for_spec(cache_key.normalized_path, spec, true));
-
-        {
-            std::lock_guard lock(render_cache_mutex());
-            if (const auto* cached = render_cache().object(cache_key)) {
-                return *cached;
-            }
-            auto cached = std::make_unique<vips::VImage>(loaded_image);
-            [[maybe_unused]] const bool inserted = render_cache().insert(cache_key, cached.get());
-            [[maybe_unused]] auto* transferred = cached.release();
-            Q_ASSERT(inserted && transferred != nullptr);
-        }
-
-        return loaded_image;
-    }
-
-    void drop_cached_image_for_path(const QString& normalized_path) {
-        if (normalized_path.isEmpty()) {
-            return;
-        }
-
-        std::lock_guard lock(render_cache_mutex());
-        auto& cache = render_cache();
-        for (const RenderCacheKey& key : cache.keys()) {
-            if (key.normalized_path == normalized_path) {
-                cache.remove(key);
-            }
-        }
-    }
 }  // namespace
 
 ImageSource::ImageSource(const QString& path) : m_path(normalized_path_for_source(path)) {}
@@ -197,10 +124,9 @@ bool ImageSource::supported_image_path(const QString& path) {
 
 vips::VImage ImageSource::load_for_render(const QString& path, const RenderSpec& spec) {
     ensure_vips_initialized();
-    return load_image_for_spec(path, spec, false);
+    vips::VImage image = vips::VImage::new_from_file(path.toUtf8().constData());
+    return apply_render_spec(image.autorot(), spec);
 }
-
-void ImageSource::drop_cached_render_data(const QString& path) { drop_cached_image_for_path(normalized_path_for_source(path)); }
 
 const QString& ImageSource::path() const noexcept { return m_path; }
 
@@ -209,29 +135,7 @@ QSize ImageSource::pixel_size() const {
     return m_pixel_size;
 }
 
-QImage ImageSource::render_region(const QRect& image_rect, const RenderSpec& spec, const QSize& output_size) const {
-    if (!image_rect.isValid()) {
-        return {};
-    }
-
-    ensure_vips_initialized();
-    vips::VImage image = cached_image_for_spec(m_path, spec);
-
-    const QRect image_bounds(0, 0, image.width(), image.height());
-    const QRect clipped_rect = image_rect.intersected(image_bounds);
-    if (!clipped_rect.isValid()) {
-        return {};
-    }
-
-    vips::VImage tile = image.crop(clipped_rect.x(), clipped_rect.y(), clipped_rect.width(), clipped_rect.height());
-    if (output_size.isValid() && output_size != clipped_rect.size()) {
-        const double scale_x = static_cast<double>(output_size.width()) / static_cast<double>(clipped_rect.width());
-        const double scale_y = static_cast<double>(output_size.height()) / static_cast<double>(clipped_rect.height());
-        tile = tile.resize(scale_x, vips::VImage::option()->set("vscale", scale_y));
-    }
-
-    return to_q_image(tile);
-}
+QImage ImageSource::render(const RenderSpec& spec) const { return to_q_image(load_for_render(m_path, spec)); }
 
 void ImageSource::ensure_loaded() const {
     if (m_loaded) {

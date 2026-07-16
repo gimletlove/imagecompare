@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QImage>
-#include <QRect>
 #include <QSize>
 #include <QString>
 #include <vips/vips8>
@@ -16,11 +15,10 @@ class ImageSource {
 
     [[nodiscard]] static bool supported_image_path(const QString& path);
     [[nodiscard]] static vips::VImage load_for_render(const QString& path, const RenderSpec& spec);
-    static void drop_cached_render_data(const QString& path);
 
     [[nodiscard]] const QString& path() const noexcept;
     [[nodiscard]] QSize pixel_size() const;
-    [[nodiscard]] QImage render_region(const QRect& image_rect, const RenderSpec& spec, const QSize& output_size = {}) const;
+    [[nodiscard]] QImage render(const RenderSpec& spec) const;
 
    private:
     [[nodiscard]] static QString normalized_path_for_source(const QString& path);

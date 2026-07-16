@@ -17,50 +17,29 @@ QUuid WorkspaceDocument::add_source_entry(const QString& path, const QSize& pixe
 }
 
 QUuid WorkspaceDocument::add_derived_entry(const QString& output_path, const QSize& pixel_size, const QString& secondary_header_label) {
-    const int previous_entry_count = entry_count();
-
-    for (int index = entry_count() - 1; index >= 0; --index) {
-        if (!m_entries_model.entry_at(index).is_derived()) {
-            continue;
-        }
-        m_entries_model.remove_entry_at(index);
-    }
-
     if (entry_count() >= k_max_entries) {
-        if (previous_entry_count != entry_count()) {
-            Q_EMIT entry_count_changed();
-        }
         return {};
     }
 
     const QUuid entry_id = QUuid::createUuid();
     const ViewableImageEntry entry = ViewableImageEntry::from_derived_heatmap(entry_id, output_path, pixel_size, secondary_header_label);
     m_entries_model.append_entry(entry);
-    if (previous_entry_count != entry_count()) {
-        Q_EMIT entry_count_changed();
-    }
+    Q_EMIT entry_count_changed();
     return entry_id;
 }
 
 ViewableImageEntry WorkspaceDocument::entry_at(int index) const { return m_entries_model.entry_at(index); }
 
-bool WorkspaceDocument::remove_entry_by_id(const QUuid& entry_id) {
+std::optional<ViewableImageEntry> WorkspaceDocument::take_entry_by_id(const QUuid& entry_id) {
     for (int index = 0; index < entry_count(); ++index) {
-        if (m_entries_model.entry_at(index).entry_id == entry_id) {
-            return remove_entry_at(index);
+        ViewableImageEntry entry = m_entries_model.entry_at(index);
+        if (entry.entry_id == entry_id) {
+            m_entries_model.remove_entry_at(index);
+            Q_EMIT entry_count_changed();
+            return entry;
         }
     }
-    return false;
-}
-
-bool WorkspaceDocument::remove_entry_at(int index) {
-    if (index < 0 || index >= entry_count()) {
-        return false;
-    }
-
-    m_entries_model.remove_entry_at(index);
-    Q_EMIT entry_count_changed();
-    return true;
+    return std::nullopt;
 }
 
 bool WorkspaceDocument::remove_derived_heatmap_entries() {

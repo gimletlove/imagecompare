@@ -168,7 +168,7 @@ Item {
         color: "#000000"
     }
 
-    TiledImageItem {
+    ImageItem {
         id: pane_image
         anchors.left: parent.left
         anchors.right: parent.right
@@ -177,7 +177,6 @@ Item {
         anchors.bottom: parent.bottom
         image_path: root.image_path_value
         display_mode: root.display_mode_value
-        viewport_rect: Qt.rect(0, 0, width, height)
         zoom_factor: root.shared_zoom_factor
         clip: true
         onActivated: root.activate_requested(root.entry_id_value)
