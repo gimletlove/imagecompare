@@ -11,7 +11,6 @@
 class ApplicationController : public QObject {
     Q_OBJECT
     Q_PROPERTY(WorkspaceDocument* workspace READ workspace CONSTANT)
-    Q_PROPERTY(DisplayMode display_mode READ display_mode NOTIFY display_mode_changed)
     Q_PROPERTY(bool heatmap_in_progress READ heatmap_in_progress NOTIFY heatmap_in_progress_changed)
 
    public:
@@ -25,22 +24,17 @@ class ApplicationController : public QObject {
     Q_INVOKABLE bool copy_path_to_clipboard(const QString& path) const;
     Q_INVOKABLE bool open_containing_folder(const QString& path) const;
     Q_INVOKABLE bool export_heatmap_by_id(const QString& entry_id) const;
-    Q_INVOKABLE void set_display_mode_faithful();
-    Q_INVOKABLE void set_display_mode_strict_raw();
+    Q_INVOKABLE void toggle_display_mode();
     Q_INVOKABLE void build_heatmap();
 
     [[nodiscard]] WorkspaceDocument* workspace() noexcept;
-    [[nodiscard]] DisplayMode display_mode() const noexcept { return m_workspace.display_mode(); }
     [[nodiscard]] bool heatmap_in_progress() const noexcept { return !m_pending_heatmap_job.isNull(); }
 
    Q_SIGNALS:
-    void display_mode_changed();
     void heatmap_in_progress_changed();
 
    private:
     void on_job_finished(QUuid job_id, const ComparisonResult& result);
-    void on_job_failed(QUuid job_id, const QString& error_text);
-    void set_display_mode_and_reset_heatmap(DisplayMode mode);
     void clear_existing_derived_heatmaps();
     void cancel_pending_heatmap();
     void delete_generated_heatmap_file(const QString& path) const;

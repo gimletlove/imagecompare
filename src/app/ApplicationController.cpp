@@ -95,8 +95,6 @@ namespace {
 
 ApplicationController::ApplicationController(QObject* parent) : QObject(parent), m_workspace(this), m_job_queue(this) {
     connect(&m_job_queue, &ComparisonJobQueue::job_finished, this, &ApplicationController::on_job_finished);
-    connect(&m_job_queue, &ComparisonJobQueue::job_failed, this, &ApplicationController::on_job_failed);
-    connect(&m_workspace, &WorkspaceDocument::display_mode_changed, this, &ApplicationController::display_mode_changed);
 }
 
 ApplicationController::~ApplicationController() { remove_generated_heatmap(true); }
@@ -256,16 +254,9 @@ bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const 
     return true;
 }
 
-void ApplicationController::set_display_mode_faithful() { set_display_mode_and_reset_heatmap(DisplayMode::Faithful); }
-
-void ApplicationController::set_display_mode_strict_raw() { set_display_mode_and_reset_heatmap(DisplayMode::StrictRaw); }
-
-void ApplicationController::set_display_mode_and_reset_heatmap(DisplayMode mode) {
-    if (m_workspace.display_mode() == mode) {
-        return;
-    }
+void ApplicationController::toggle_display_mode() {
     clear_existing_derived_heatmaps();
-    m_workspace.set_display_mode(mode);
+    m_workspace.set_display_mode(m_workspace.display_mode() == DisplayMode::Faithful ? DisplayMode::StrictRaw : DisplayMode::Faithful);
 }
 
 void ApplicationController::clear_existing_derived_heatmaps() {
@@ -303,14 +294,22 @@ void ApplicationController::build_heatmap() {
 WorkspaceDocument* ApplicationController::workspace() noexcept { return &m_workspace; }
 
 void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult& result) {
+    if (!result.success) {
+        if (m_pending_heatmap_job == job_id) {
+            cancel_pending_heatmap();
+        }
+        qWarning().noquote() << "Heatmap job failed for" << job_id.toString(QUuid::WithoutBraces) << ":"
+                             << (result.error_text.isEmpty() ? QStringLiteral("unknown error") : result.error_text);
+        return;
+    }
     if (m_pending_heatmap_job != job_id) {
-        if (result.success && !result.output_path.isEmpty()) {
+        if (!result.output_path.isEmpty()) {
             delete_generated_heatmap_file(result.output_path);
         }
         return;
     }
     cancel_pending_heatmap();
-    if (!result.success || result.output_path.isEmpty()) {
+    if (result.output_path.isEmpty()) {
         return;
     }
 
@@ -329,14 +328,6 @@ void ApplicationController::on_job_finished(QUuid job_id, const ComparisonResult
     } catch (const std::exception& ex) {
         qWarning().noquote() << "Failed to load generated heatmap result" << result.output_path << ":" << ex.what();
     }
-}
-
-void ApplicationController::on_job_failed(QUuid job_id, const QString& error_text) {
-    if (m_pending_heatmap_job == job_id) {
-        cancel_pending_heatmap();
-    }
-    qWarning().noquote() << "Heatmap job failed for" << job_id.toString(QUuid::WithoutBraces) << ":"
-                         << (error_text.isEmpty() ? QStringLiteral("unknown error") : error_text);
 }
 
 void ApplicationController::cancel_pending_heatmap() {

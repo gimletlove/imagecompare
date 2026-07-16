@@ -27,6 +27,7 @@ namespace {
     constexpr double k_heatmap_bad_de00 = 5.0;
     constexpr double k_spatial_sigma = 0.6;
     constexpr int k_heatmap_lut_width = 256;
+    constexpr std::size_t k_heatmap_lut_last_index = k_heatmap_lut_width - 1;
     constexpr std::size_t k_heatmap_lut_size = static_cast<std::size_t>(k_heatmap_lut_width) * 3;
 
     struct HeatmapColor {
@@ -41,12 +42,7 @@ namespace {
         HeatmapColor{1.0, 0.5, 0.5}, HeatmapColor{1.0, 1.0, 0.5}, HeatmapColor{1.0, 1.0, 1.0}, HeatmapColor{1.0, 1.0, 1.0},
     };
 
-    ComparisonResult fail(const QString& message) {
-        ComparisonResult result;
-        result.success = false;
-        result.error_text = message;
-        return result;
-    }
+    ComparisonResult fail(const QString& message) { return {.success = false, .error_text = message, .output_path = {}, .summary = {}}; }
 
     struct PendingComparisonResult {
         PendingComparisonResult() = default;
@@ -113,8 +109,8 @@ namespace {
 
     std::array<std::uint8_t, k_heatmap_lut_size> build_heatmap_lut() {
         std::array<std::uint8_t, k_heatmap_lut_size> lut = {};
-        for (std::size_t index = 0; index < 256; ++index) {
-            const double level = static_cast<double>(index) / 255.0;
+        for (std::size_t index = 0; index <= k_heatmap_lut_last_index; ++index) {
+            const double level = static_cast<double>(index) / static_cast<double>(k_heatmap_lut_last_index);
             const double palette_position = level * static_cast<double>(k_heatmap_palette.size() - 1);
             const std::size_t palette_index = std::min(static_cast<std::size_t>(palette_position), k_heatmap_palette.size() - 2);
             const double blend = palette_position - static_cast<double>(palette_index);
@@ -129,7 +125,7 @@ namespace {
     }
 
     vips::VImage heatmap_lut() {
-        static std::array<std::uint8_t, k_heatmap_lut_size> lut = build_heatmap_lut();
+        static const std::array<std::uint8_t, k_heatmap_lut_size> lut = build_heatmap_lut();
         return vips::VImage::new_from_memory_copy(lut.data(), lut.size() * sizeof(std::uint8_t), k_heatmap_lut_width, 1, 3,
                                                   VIPS_FORMAT_UCHAR);
     }
@@ -174,9 +170,10 @@ namespace {
             const vips::VImage first_lab = first.colourspace(VIPS_INTERPRETATION_LAB);
             const vips::VImage second_lab = second.colourspace(VIPS_INTERPRETATION_LAB);
             const vips::VImage de00 = first_lab.dE00(second_lab).cast(VIPS_FORMAT_FLOAT);
+            const vips::VImage statistics = de00.stats();
 
-            result.summary.overall_de00 = de00.avg();
-            result.summary.peak_de00 = de00.max();
+            result.summary.overall_de00 = statistics.getpoint(4, 0).front();
+            result.summary.peak_de00 = statistics.getpoint(1, 0).front();
 
             const vips::VImage perceptual_diff = de00.gaussblur(k_spatial_sigma).cast(VIPS_FORMAT_FLOAT);
             const vips::VImage display_heatmap = colorize_heatmap(perceptual_diff);
@@ -217,13 +214,7 @@ QUuid ComparisonJobQueue::enqueue(const ComparisonRequest& request) {
                     if (queue_guard == nullptr) {
                         return;
                     }
-                    if (pending_result->value.success) {
-                        Q_EMIT queue_guard->job_finished(job_id, pending_result->take());
-                    } else {
-                        const QString text = pending_result->value.error_text.isEmpty() ? QStringLiteral("comparison job failed")
-                                                                                        : pending_result->value.error_text;
-                        Q_EMIT queue_guard->job_failed(job_id, text);
-                    }
+                    Q_EMIT queue_guard->job_finished(job_id, pending_result->take());
                 },
                 Qt::QueuedConnection);
         } catch (const std::exception& ex) {
@@ -236,7 +227,7 @@ QUuid ComparisonJobQueue::enqueue(const ComparisonRequest& request) {
                     if (queue_guard == nullptr) {
                         return;
                     }
-                    Q_EMIT queue_guard->job_failed(job_id, ex_text);
+                    Q_EMIT queue_guard->job_finished(job_id, fail(ex_text));
                 },
                 Qt::QueuedConnection);
         }
