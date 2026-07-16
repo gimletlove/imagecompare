@@ -31,15 +31,9 @@ Item {
     Action {
         id: display_mode_action
         shortcut: "R"
-        text: (root.controller && root.controller.display_mode === 0 ? "Raw" : "Faithful") + " (r)"
+        text: (root.controller && root.controller.workspace && root.controller.workspace.display_mode === 0 ? "Raw" : "Faithful") + " (r)"
         enabled: panes_grid.can_best_fit_action
-        onTriggered: {
-            if (root.controller.display_mode === 0) {
-                root.controller.set_display_mode_faithful()
-            } else {
-                root.controller.set_display_mode_strict_raw()
-            }
-        }
+        onTriggered: root.controller.toggle_display_mode()
     }
 
     Action {
@@ -69,68 +63,50 @@ Item {
         checked: panes_grid.match_zoom_enabled
         onTriggered: {
             panes_grid.match_zoom_enabled = !panes_grid.match_zoom_enabled
-            if (panes_grid.match_zoom_enabled) {
-                panes_grid.reconcile_match_zoom_now()
-            } else {
-                panes_grid.restore_numeric_zoom_now()
-            }
+            panes_grid.sync_current_view_now()
         }
     }
 
-    Action {
-        id: copy_action
-        shortcut: "Ctrl+C"
-        onTriggered: panes_grid.copy_active_path()
+    Shortcut {
+        sequence: "Ctrl+C"
+        onActivated: panes_grid.copy_active_path()
     }
 
-    Action {
-        id: remove_action
-        shortcut: "Ctrl+W"
-        onTriggered: panes_grid.remove_active_entry()
+    Shortcut {
+        sequence: "Ctrl+W"
+        onActivated: panes_grid.remove_active_entry()
     }
 
-    Action {
-        id: move_left_action
-        shortcut: "Ctrl+Left"
-        onTriggered: panes_grid.move_active_pane(-1)
+    Shortcut {
+        sequence: "Ctrl+Left"
+        onActivated: panes_grid.move_active_pane(-1)
     }
 
-    Action {
-        id: move_right_action
-        shortcut: "Ctrl+Right"
-        onTriggered: panes_grid.move_active_pane(1)
+    Shortcut {
+        sequence: "Ctrl+Right"
+        onActivated: panes_grid.move_active_pane(1)
     }
 
-    Action {
-        id: focus_action
-        shortcut: "Return"
-        onTriggered: panes_grid.toggle_focus_active_pane()
+    Shortcut {
+        sequences: ["Return", "Enter"]
+        onActivated: panes_grid.toggle_focus_active_pane()
     }
 
-    Action {
-        id: enter_focus_action
-        shortcut: "Enter"
-        onTriggered: focus_action.trigger()
+    Shortcut {
+        sequence: "Escape"
+        onActivated: panes_grid.clear_focus()
     }
 
-    Action {
-        id: clear_focus_action
-        shortcut: "Escape"
-        onTriggered: panes_grid.clear_focus()
-    }
-
-    Action {
-        id: cycle_forward_action
-        shortcut: "Right"
+    Shortcut {
+        sequence: "Right"
         enabled: panes_grid.overlay_mode_enabled
-        onTriggered: panes_grid.cycle_overlay_pane(1)
+        onActivated: panes_grid.cycle_overlay_pane(1)
     }
 
-    Action {
-        id: cycle_backward_action
-        shortcut: "Left"
+    Shortcut {
+        sequence: "Left"
         enabled: panes_grid.overlay_mode_enabled
-        onTriggered: panes_grid.cycle_overlay_pane(-1)
+        onActivated: panes_grid.cycle_overlay_pane(-1)
     }
 
     ColumnLayout {

@@ -11,7 +11,7 @@ QtObject {
     property var last_sync_source_pane: null
     property bool best_fit_refresh_scheduled: false
     property bool syncing_view_state: false
-    readonly property string zoom_readout: Math.round(Number(shared_zoom_factor) * 100.0).toString() + "%"
+    readonly property string zoom_readout: Math.round(shared_zoom_factor * 100.0) + "%"
 
     function first_visible_pane() {
         for (let index = 0; index < pane_repeater.count; ++index) {
@@ -42,20 +42,8 @@ QtObject {
         return first_visible_pane();
     }
 
-    function reconcile_match_zoom_now() {
-        if (!match_zoom_enabled || pane_repeater.count <= 0) {
-            return false;
-        }
-        const source_pane = active_sync_pane();
-        if (!source_pane) {
-            return false;
-        }
-        update_shared_from_pane(source_pane, source_pane.zoom_factor_value, source_pane.image_center_value);
-        return true;
-    }
-
-    function restore_numeric_zoom_now() {
-        if (match_zoom_enabled || pane_repeater.count <= 0) {
+    function sync_current_view_now(): bool {
+        if (pane_repeater.count <= 0) {
             return false;
         }
         const source_pane = active_sync_pane();
@@ -88,8 +76,8 @@ QtObject {
             let target_zoom = shared_zoom_factor;
             let target_center = shared_image_center;
             if (match_zoom_enabled) {
-                const source_best_fit = Number(source_pane.current_best_fit_zoom());
-                const target_best_fit = Number(pane.current_best_fit_zoom());
+                const source_best_fit = Number(source_pane.image_item.best_fit_zoom());
+                const target_best_fit = Number(pane.image_item.best_fit_zoom());
                 if (source_best_fit > 0.0 && target_best_fit > 0.0) {
                     const normalized_zoom = shared_zoom_factor / source_best_fit;
                     if (isFinite(normalized_zoom) && normalized_zoom > 0.0) {
@@ -109,12 +97,13 @@ QtObject {
                     }
                 }
             }
-            pane.apply_shared_view_state(target_zoom, target_center);
+            pane.image_item.zoom_factor = target_zoom;
+            pane.image_item.image_center = target_center;
         }
         syncing_view_state = false;
     }
 
-    function set_zoom100() {
+    function set_zoom100(): bool {
         if (pane_repeater.count <= 0) {
             return false;
         }
@@ -124,7 +113,7 @@ QtObject {
             if (!source_pane) {
                 return false;
             }
-            source_pane.set_zoom100();
+            source_pane.image_item.zoom_factor = 1.0;
             update_shared_from_pane(source_pane, source_pane.zoom_factor_value, source_pane.image_center_value);
             return true;
         }
@@ -136,7 +125,7 @@ QtObject {
             if (!pane) {
                 continue;
             }
-            pane.set_zoom100();
+            pane.image_item.zoom_factor = 1.0;
         }
         syncing_view_state = false;
 
@@ -148,7 +137,7 @@ QtObject {
         return true;
     }
 
-    function set_best_fit() {
+    function set_best_fit(): bool {
         if (pane_repeater.count <= 0) {
             return false;
         }
@@ -160,7 +149,7 @@ QtObject {
             if (!pane) {
                 continue;
             }
-            pane.apply_best_fit();
+            pane.image_item.set_best_fit();
         }
         syncing_view_state = false;
 
@@ -172,7 +161,7 @@ QtObject {
         return true;
     }
 
-    function toggle_zoom_fit() {
+    function toggle_zoom_fit(): bool {
         if (pane_repeater.count <= 0) {
             return false;
         }
@@ -183,14 +172,14 @@ QtObject {
         }
 
         const current_zoom = Number(source_pane.zoom_factor_value);
-        const best_fit_zoom = Number(source_pane.current_best_fit_zoom());
+        const best_fit_zoom = Number(source_pane.image_item.best_fit_zoom());
         if (best_fit_zoom > 0.0 && Math.abs(current_zoom - best_fit_zoom) <= Math.max(0.001, best_fit_zoom * 0.01)) {
             return set_zoom100();
         }
         return set_best_fit();
     }
 
-    function schedule_best_fit_refresh() {
+    function schedule_best_fit_refresh(): void {
         if (!shared_best_fit_active || best_fit_refresh_scheduled) {
             return;
         }

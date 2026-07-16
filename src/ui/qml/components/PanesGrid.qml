@@ -1,3 +1,5 @@
+pragma ComponentBehavior: Bound
+
 import QtQuick
 import ImageCompare 1.0
 
@@ -21,7 +23,7 @@ Item {
     readonly property int column_count: layout_pane_count <= 1 ? 1 : (layout_pane_count === 2 ? 2 : (layout_pane_count === 3 ? 3 : 2))
     readonly property int row_count: layout_pane_count === 0 ? 1 : Math.ceil(layout_pane_count / column_count)
 
-    function source_pane_count() {
+    function source_pane_count(): int {
         let source_count = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
@@ -32,7 +34,7 @@ Item {
         return source_count;
     }
 
-    function panes_share_resolution() {
+    function panes_share_resolution(): bool {
         let baseline_width = 0.0;
         let baseline_height = 0.0;
         let comparable_panes = 0;
@@ -57,28 +59,17 @@ Item {
         return comparable_panes > 1;
     }
 
-    function non_source_pane_count() {
-        let count = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane && !pane.source_pane_value) {
-                count += 1;
-            }
-        }
-        return count;
-    }
-
-    function effective_pane_count() {
+    function effective_pane_count(): int {
         if (focused_entry_id.length > 0) {
             return pane_count > 0 ? 1 : 0;
         }
         if (!overlay_mode_enabled || overlay_source_pane_count <= 1) {
             return pane_count;
         }
-        return non_source_pane_count() + 1;
+        return pane_count - overlay_source_pane_count + 1;
     }
 
-    function source_ordinal_for_repeater_index(repeater_index) {
+    function source_ordinal_for_repeater_index(repeater_index: int): int {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
@@ -93,7 +84,7 @@ Item {
         return -1;
     }
 
-    function source_ordinal_for_entry_id(entry_id) {
+    function source_ordinal_for_entry_id(entry_id: string): int {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
@@ -108,7 +99,7 @@ Item {
         return -1;
     }
 
-    function source_entry_id_for_ordinal(target_ordinal) {
+    function source_entry_id_for_ordinal(target_ordinal: int): string {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
@@ -123,7 +114,7 @@ Item {
         return "";
     }
 
-    function pane_for_entry_id(entry_id) {
+    function pane_for_entry_id(entry_id: string): var {
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
             if (pane && pane.entry_id_value === entry_id) {
@@ -133,7 +124,7 @@ Item {
         return null;
     }
 
-    function first_pane() {
+    function first_pane(): var {
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
             if (pane) {
@@ -143,7 +134,7 @@ Item {
         return null;
     }
 
-    function first_visible_pane() {
+    function first_visible_pane(): var {
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
             if (pane && pane.visible) {
@@ -153,7 +144,7 @@ Item {
         return null;
     }
 
-    function validate_active_entry() {
+    function validate_active_entry(): void {
         if (focused_entry_id.length > 0 && !pane_for_entry_id(focused_entry_id)) {
             focused_entry_id = "";
         }
@@ -165,7 +156,7 @@ Item {
         active_entry_id = next_pane ? next_pane.entry_id_value : "";
     }
 
-    function activate_entry(entry_id) {
+    function activate_entry(entry_id: string): bool {
         const pane = pane_for_entry_id(entry_id);
         if (!pane) {
             return false;
@@ -181,7 +172,7 @@ Item {
         return true;
     }
 
-    function is_pane_visible_in_layout(repeater_index, source_pane, entry_id) {
+    function is_pane_visible_in_layout(repeater_index: int, source_pane: bool, entry_id: string): bool {
         if (focused_entry_id.length > 0) {
             return entry_id === focused_entry_id;
         }
@@ -191,7 +182,7 @@ Item {
         return source_ordinal_for_repeater_index(repeater_index) === active_overlay_source_index;
     }
 
-    function normalize_overlay_selection() {
+    function normalize_overlay_selection(): void {
         const source_count = overlay_source_pane_count;
         if (source_count <= 0) {
             active_overlay_source_index = 0;
@@ -203,7 +194,7 @@ Item {
         }
     }
 
-    function toggle_overlay_mode() {
+    function toggle_overlay_mode(): bool {
         if (overlay_source_pane_count <= 1) {
             overlay_mode_enabled = false;
             return false;
@@ -224,7 +215,7 @@ Item {
         return true;
     }
 
-    function cycle_overlay_pane(step) {
+    function cycle_overlay_pane(step: int): bool {
         if (!overlay_mode_enabled || overlay_source_pane_count <= 1) {
             return false;
         }
@@ -235,15 +226,11 @@ Item {
         return true;
     }
 
-    function reconcile_match_zoom_now() {
-        return interaction_controller.reconcile_match_zoom_now();
+    function sync_current_view_now(): bool {
+        return interaction_controller.sync_current_view_now();
     }
 
-    function restore_numeric_zoom_now() {
-        return interaction_controller.restore_numeric_zoom_now();
-    }
-
-    function remove_entry(entry_id) {
+    function remove_entry(entry_id: string): bool {
         if (!root.controller || !entry_id) {
             return false;
         }
@@ -258,12 +245,12 @@ Item {
         return removed;
     }
 
-    function remove_active_entry() {
+    function remove_active_entry(): bool {
         validate_active_entry();
         return remove_entry(active_entry_id);
     }
 
-    function move_entry(entry_id, direction) {
+    function move_entry(entry_id: string, direction: int): bool {
         if (overlay_mode_enabled || !root.controller || !entry_id) {
             return false;
         }
@@ -275,22 +262,22 @@ Item {
         return moved;
     }
 
-    function move_active_pane(direction) {
+    function move_active_pane(direction: int): bool {
         validate_active_entry();
         return move_entry(active_entry_id, direction);
     }
 
-    function copy_active_path() {
+    function copy_active_path(): bool {
         validate_active_entry();
         const pane = pane_for_entry_id(active_entry_id);
         return pane && pane.source_pane_value && root.controller ? root.controller.copy_path_to_clipboard(pane.image_path_value) : false;
     }
 
-    function export_entry_heatmap(entry_id) {
+    function export_entry_heatmap(entry_id: string): bool {
         return root.controller && entry_id ? root.controller.export_heatmap_by_id(String(entry_id)) : false;
     }
 
-    function toggle_focus_active_pane() {
+    function toggle_focus_active_pane(): bool {
         validate_active_entry();
         if (active_entry_id.length <= 0) {
             return false;
@@ -299,7 +286,7 @@ Item {
         return true;
     }
 
-    function clear_focus() {
+    function clear_focus(): bool {
         if (focused_entry_id.length <= 0) {
             return false;
         }
@@ -308,11 +295,11 @@ Item {
         return true;
     }
 
-    function toggle_zoom_fit() {
+    function toggle_zoom_fit(): bool {
         return interaction_controller.toggle_zoom_fit();
     }
 
-    function set_best_fit() {
+    function set_best_fit(): bool {
         return interaction_controller.set_best_fit();
     }
 
@@ -330,10 +317,10 @@ Item {
     onCan_match_zoom_actionChanged: {
         if (!can_match_zoom_action && match_zoom_enabled) {
             match_zoom_enabled = false;
-            restore_numeric_zoom_now();
+            sync_current_view_now();
         } else if (can_match_zoom_action && !match_zoom_enabled) {
             match_zoom_enabled = true;
-            Qt.callLater(reconcile_match_zoom_now);
+            Qt.callLater(sync_current_view_now);
         }
     }
     onOverlay_mode_enabledChanged: {
@@ -363,12 +350,19 @@ Item {
             model: root.model
 
             delegate: ComparisonPaneItem {
+                required property int index
+                required property string primaryHeader
+                required property string secondaryHeader
+                required property string entryId
+                required property string imagePath
+                required property bool isSource
+
                 primary_header_text: primaryHeader
                 secondary_header_text: secondaryHeader
-                entry_id_value: String(entryId)
-                image_path_value: String(imagePath)
-                source_pane_value: Boolean(isSource)
-                display_mode_value: root.controller ? root.controller.display_mode : 1
+                entry_id_value: entryId
+                image_path_value: imagePath
+                source_pane_value: isSource
+                display_mode_value: root.controller && root.controller.workspace ? root.controller.workspace.display_mode : 1
                 shared_zoom_factor: interaction_controller.shared_zoom_factor
                 active: root.active_entry_id === entry_id_value
                 can_move: !root.overlay_mode_enabled

@@ -14,6 +14,7 @@ Item {
     property real shared_zoom_factor: 1.0
     property bool active: false
     property bool can_move: true
+    property alias image_item: pane_image
 
     readonly property real zoom_factor_value: pane_image.zoom_factor
     readonly property point image_center_value: pane_image.image_center
@@ -27,23 +28,6 @@ Item {
     signal open_folder_requested(string path)
     signal move_requested(string entry_id, int direction)
     signal export_heatmap_requested(string entry_id)
-
-    function apply_shared_view_state(zoom_value, center_point) {
-        pane_image.zoom_factor = zoom_value
-        pane_image.image_center = center_point
-    }
-
-    function apply_best_fit() {
-        pane_image.set_best_fit()
-    }
-
-    function current_best_fit_zoom() {
-        return pane_image.best_fit_zoom()
-    }
-
-    function set_zoom100() {
-        pane_image.zoom_factor = 1.0
-    }
 
     TapHandler {
         acceptedButtons: Qt.RightButton
@@ -117,10 +101,10 @@ Item {
         implicitHeight: 28
         height: implicitHeight
 
-        readonly property bool has_secondary_in_display: String(root.secondary_header_text).trim().length > 0
+        readonly property bool has_secondary_in_display: root.secondary_header_text.trim().length > 0
         readonly property string full_header_tool_tip_text: has_secondary_in_display
-            ? String(root.primary_header_text) + " • " + String(root.secondary_header_text).trim()
-            : String(root.primary_header_text)
+            ? root.primary_header_text + " • " + root.secondary_header_text.trim()
+            : root.primary_header_text
 
         RowLayout {
             anchors.fill: parent

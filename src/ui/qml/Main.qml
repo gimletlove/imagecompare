@@ -28,7 +28,7 @@ ApplicationWindow {
         anchors.fill: parent
         visible: window.drop_active
         z: 10
-        color: Qt.rgba(0, 0, 0, 0.2)
+        color: "#33000000"
 
         Pane {
             anchors.centerIn: parent
