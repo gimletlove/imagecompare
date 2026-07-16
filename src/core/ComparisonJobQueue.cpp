@@ -125,7 +125,7 @@ namespace {
     }
 
     vips::VImage heatmap_lut() {
-        static const std::array<std::uint8_t, k_heatmap_lut_size> lut = build_heatmap_lut();
+        auto lut = build_heatmap_lut();
         return vips::VImage::new_from_memory_copy(lut.data(), lut.size() * sizeof(std::uint8_t), k_heatmap_lut_width, 1, 3,
                                                   VIPS_FORMAT_UCHAR);
     }
