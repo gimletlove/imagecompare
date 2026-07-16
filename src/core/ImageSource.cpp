@@ -131,23 +131,12 @@ vips::VImage ImageSource::load_for_render(const QString& path, const RenderSpec&
 const QString& ImageSource::path() const noexcept { return m_path; }
 
 QSize ImageSource::pixel_size() const {
-    ensure_loaded();
-    return m_pixel_size;
+    ensure_vips_initialized();
+    const vips::VImage image = vips::VImage::new_from_file(m_path.toUtf8().constData()).autorot();
+    return {image.width(), image.height()};
 }
 
 QImage ImageSource::render(const RenderSpec& spec) const { return to_q_image(load_for_render(m_path, spec)); }
-
-void ImageSource::ensure_loaded() const {
-    if (m_loaded) {
-        return;
-    }
-
-    ensure_vips_initialized();
-    vips::VImage image = vips::VImage::new_from_file(m_path.toUtf8().constData()).autorot();
-
-    m_pixel_size = QSize(image.width(), image.height());
-    m_loaded = true;
-}
 
 QString ImageSource::normalized_path_for_source(const QString& path) {
     const QFileInfo file_info(path);

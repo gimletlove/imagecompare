@@ -192,13 +192,4 @@ Item {
         }
     }
 
-    Connections {
-        target: root.controller && root.controller.workspace ? root.controller.workspace : null
-        function onEntry_count_changed() {
-            if (root.controller && root.controller.workspace && root.controller.workspace.entry_count > 0) {
-                Qt.callLater(() => panes_grid.set_best_fit())
-            }
-        }
-    }
-
 }

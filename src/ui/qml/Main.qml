@@ -8,15 +8,10 @@ ApplicationWindow {
     width: 1280
     height: 800
     title: "Image Compare"
-    property bool drop_active: false
 
     DropArea {
+        id: drop_area
         anchors.fill: parent
-        onEntered: window.drop_active = true
-        onExited: window.drop_active = false
-        onDropped: () => {
-            window.drop_active = false;
-        }
     }
 
     ComparisonWorkspace {
@@ -26,7 +21,7 @@ ApplicationWindow {
 
     Rectangle {
         anchors.fill: parent
-        visible: window.drop_active
+        visible: drop_area.containsDrag
         z: 10
         color: "#33000000"
 

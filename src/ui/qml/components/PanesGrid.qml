@@ -124,26 +124,6 @@ Item {
         return null;
     }
 
-    function first_pane(): var {
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane) {
-                return pane;
-            }
-        }
-        return null;
-    }
-
-    function first_visible_pane(): var {
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane && pane.visible) {
-                return pane;
-            }
-        }
-        return null;
-    }
-
     function validate_active_entry(): void {
         if (focused_entry_id.length > 0 && !pane_for_entry_id(focused_entry_id)) {
             focused_entry_id = "";
@@ -152,7 +132,7 @@ Item {
             return;
         }
 
-        const next_pane = first_visible_pane() || first_pane();
+        const next_pane = interaction_controller.first_visible_pane();
         active_entry_id = next_pane ? next_pane.entry_id_value : "";
     }
 

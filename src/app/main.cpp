@@ -29,10 +29,9 @@ int main(int argc, char* argv[]) {
     if (engine.rootObjects().isEmpty()) {
         return -1;
     }
-    auto* root_window = qobject_cast<QWindow*>(engine.rootObjects().constFirst());
-    if (root_window != nullptr) {
-        auto* window_drop_filter = new WindowDropFilter(&controller, root_window);
-        root_window->installEventFilter(window_drop_filter);
+    WindowDropFilter window_drop_filter(&controller);
+    if (auto* root_window = qobject_cast<QWindow*>(engine.rootObjects().constFirst()); root_window != nullptr) {
+        root_window->installEventFilter(&window_drop_filter);
     }
 
     return app.exec();

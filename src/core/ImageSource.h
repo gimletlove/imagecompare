@@ -22,9 +22,6 @@ class ImageSource {
 
    private:
     [[nodiscard]] static QString normalized_path_for_source(const QString& path);
-    void ensure_loaded() const;
 
     QString m_path;
-    mutable bool m_loaded = false;
-    mutable QSize m_pixel_size;
 };

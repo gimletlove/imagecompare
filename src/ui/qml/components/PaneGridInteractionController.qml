@@ -5,7 +5,6 @@ QtObject {
 
     property var pane_repeater
     property real shared_zoom_factor: 1.0
-    property point shared_image_center: Qt.point(0, 0)
     property bool shared_best_fit_active: true
     property bool match_zoom_enabled: false
     property var last_sync_source_pane: null
@@ -59,13 +58,9 @@ QtObject {
             return;
         }
 
-        const has_zoom_value = zoom_value !== undefined && zoom_value !== null;
-        const has_center_point = center_point !== undefined && center_point !== null;
-
         syncing_view_state = true;
         shared_best_fit_active = false;
-        shared_zoom_factor = has_zoom_value ? Number(zoom_value) : source_pane.zoom_factor_value;
-        shared_image_center = has_center_point ? center_point : source_pane.image_center_value;
+        shared_zoom_factor = Number(zoom_value);
         last_sync_source_pane = source_pane;
 
         for (let index = 0; index < pane_repeater.count; ++index) {
@@ -74,7 +69,7 @@ QtObject {
                 continue;
             }
             let target_zoom = shared_zoom_factor;
-            let target_center = shared_image_center;
+            let target_center = center_point;
             if (match_zoom_enabled) {
                 const source_best_fit = Number(source_pane.image_item.best_fit_zoom());
                 const target_best_fit = Number(pane.image_item.best_fit_zoom());
@@ -90,8 +85,8 @@ QtObject {
                 const target_width = Number(pane.image_pixel_width);
                 const target_height = Number(pane.image_pixel_height);
                 if (source_width > 0.0 && source_height > 0.0 && target_width > 0.0 && target_height > 0.0) {
-                    const normalized_x = shared_image_center.x / source_width;
-                    const normalized_y = shared_image_center.y / source_height;
+                    const normalized_x = center_point.x / source_width;
+                    const normalized_y = center_point.y / source_height;
                     if (isFinite(normalized_x) && isFinite(normalized_y)) {
                         target_center = Qt.point(normalized_x * target_width, normalized_y * target_height);
                     }
@@ -132,7 +127,6 @@ QtObject {
         const first_pane = pane_repeater.itemAt(0);
         if (first_pane) {
             shared_zoom_factor = first_pane.zoom_factor_value;
-            shared_image_center = first_pane.image_center_value;
         }
         return true;
     }
@@ -156,7 +150,6 @@ QtObject {
         const first_pane = pane_repeater.itemAt(0);
         if (first_pane) {
             shared_zoom_factor = first_pane.zoom_factor_value;
-            shared_image_center = first_pane.image_center_value;
         }
         return true;
     }
