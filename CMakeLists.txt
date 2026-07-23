@@ -47,6 +47,8 @@ add_executable(imagecompare
     src/app/WindowDropFilter.cpp
 )
 if(WIN32)
+    configure_file(packaging/windows/imagecompare.rc.in imagecompare.rc @ONLY)
+    target_sources(imagecompare PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/imagecompare.rc")
     set_target_properties(imagecompare PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 qt_add_resources(imagecompare image_compare_app_resources
