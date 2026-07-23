@@ -133,7 +133,7 @@ set(CPACK_PACKAGE_CONTACT "gimletlove <gimletlove@users.noreply.github.com>")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/gimletlove/imagecompare")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Image comparison and visual diff tool")
 set(CPACK_PACKAGE_DESCRIPTION
-    "Image Compare lets you inspect two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. It supports synchronized zoom and pan, grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips."
+    "Image Compare lets you inspect two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. Zoom and pan stay synchronized across images, with relative synchronization across different resolutions. It also supports grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips."
 )
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_GENERATOR "DEB;RPM")

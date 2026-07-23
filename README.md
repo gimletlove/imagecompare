@@ -23,7 +23,7 @@ Use it to compare different versions of the same image, choose the best-quality 
 - Use stacked view to flip between images in the same position for quick comparison
 - Generate and export perceptual heatmaps from two images to highlight subtle visual differences
 - Switch between embedded color-profile rendering and raw rendering
-- Copy image paths, open containing folders, move images, and close files from pane context menus
+- Copy image paths, open containing folders, move images, and close files from image context menus
 - Load, zoom, and pan images efficiently with Qt6 and libvips
 
 ## Keyboard Shortcuts
@@ -39,7 +39,7 @@ Use it to compare different versions of the same image, choose the best-quality 
 | `l` | Toggle synchronization lock for the active image |
 | `r` | Toggle color-profile / raw rendering |
 | `b` | Build heatmap |
-| `Ctrl+W` | Close active pane |
+| `Ctrl+W` | Close active image |
 | `Ctrl+Left` / `Ctrl+Right` | Move image left / right |
 
 ## Install

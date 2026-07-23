@@ -359,7 +359,7 @@ Item {
         anchors.topMargin: 0
         anchors.bottomMargin: 2
         columns: root.column_count
-        spacing: 4
+        spacing: 3
 
         Repeater {
             id: pane_repeater

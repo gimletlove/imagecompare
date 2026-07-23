@@ -116,12 +116,12 @@ Item {
 
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 4
+        anchors.margins: 3
         spacing: 1
 
         Item {
             Layout.fillWidth: true
-            Layout.preferredHeight: 34
+            Layout.preferredHeight: 32
 
             RowLayout {
                 anchors.fill: parent
@@ -129,6 +129,7 @@ Item {
 
                 ToolButton {
                     action: open_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
                     ToolTip.text: "Import images into the workspace"
                     focusPolicy: Qt.NoFocus
@@ -140,6 +141,7 @@ Item {
 
                 ToolButton {
                     action: heatmap_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
                     ToolTip.text: "Build a heatmap of the level of difference from two images"
                     focusPolicy: Qt.NoFocus
@@ -147,6 +149,7 @@ Item {
 
                 ToolButton {
                     action: display_mode_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
                     ToolTip.text: "Faithful uses color profile metadata; Raw ignores color profile metadata"
                     focusPolicy: Qt.NoFocus
@@ -154,6 +157,7 @@ Item {
 
                 ToolButton {
                     action: zoom_fit_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
                     ToolTip.text: "Toggle best fit and 100 percent zoom (F)"
                     focusPolicy: Qt.NoFocus
@@ -161,15 +165,17 @@ Item {
 
                 ToolButton {
                     action: overlay_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
-                    ToolTip.text: "Stack image panes and cycle with arrow keys"
+                    ToolTip.text: "Stack images and cycle with arrow keys"
                     focusPolicy: Qt.NoFocus
                 }
 
                 ToolButton {
                     action: match_zoom_action
+                    ToolTip.delay: 300
                     ToolTip.visible: hovered
-                    ToolTip.text: "Normalize zoom and pan across different image sizes"
+                    ToolTip.text: "Synchronize zoom and pan proportionally across different image resolutions"
                     focusPolicy: Qt.NoFocus
                 }
             }

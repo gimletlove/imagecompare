@@ -110,7 +110,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: parent.top
-        implicitHeight: 28
+        implicitHeight: 26
         height: implicitHeight
 
         readonly property bool has_secondary_in_display: root.secondary_header_text.trim().length > 0
@@ -123,11 +123,40 @@ Item {
             spacing: 4
 
             Label {
+                text: "[F]"
+                visible: root.focused
+                color: "orange"
+                font.bold: true
+                Accessible.name: "Focused view"
+                HoverHandler {
+                    id: focus_label_hover
+                }
+                ToolTip.delay: 300
+                ToolTip.visible: focus_label_hover.hovered
+                ToolTip.text: "Focused view (Enter to exit)"
+            }
+
+            Label {
+                text: "[L]"
+                visible: root.synchronization_locked
+                color: "orange"
+                font.bold: true
+                Accessible.name: "Synchronization locked"
+                HoverHandler {
+                    id: lock_label_hover
+                }
+                ToolTip.delay: 300
+                ToolTip.visible: lock_label_hover.hovered
+                ToolTip.text: "Synchronization locked"
+            }
+
+            Label {
                 text: pane_header.full_header_tool_tip_text
                 elide: Text.ElideMiddle
                 HoverHandler {
                     id: primary_label_hover
                 }
+                ToolTip.delay: 300
                 ToolTip.visible: primary_label_hover.hovered
                 ToolTip.text: pane_header.full_header_tool_tip_text
                 Layout.fillWidth: true
@@ -138,6 +167,7 @@ Item {
                 implicitWidth: 22
                 implicitHeight: 22
                 focusPolicy: Qt.NoFocus
+                ToolTip.delay: 300
                 ToolTip.visible: hovered
                 ToolTip.text: "Remove image"
                 onClicked: root.remove_requested(root.entry_id_value)
@@ -159,7 +189,7 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: pane_header.bottom
-        anchors.topMargin: 5
+        anchors.topMargin: 4
         anchors.bottom: parent.bottom
         color: "#000000"
     }

@@ -11,13 +11,15 @@
   </developer>
   <description>
     <p>Image Compare is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, stacked, or in a grid with synchronized zoom and pan, and generate perceptual heatmaps to highlight visual differences.</p>
+    <p>All images zoom and pan together. For different resolutions, relative sync keeps the same proportional region visible in each image.</p>
     <p>Use it to choose the best-quality copy, inspect compression artifacts, scans, and exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.</p>
     <ul>
       <li>Open images by drag and drop, file picker, command line, or file manager</li>
       <li>Flip between images in stacked view or inspect several images in a grid</li>
+      <li>Synchronize all images, including proportionally across different resolutions</li>
       <li>Generate and export perceptual heatmaps for two images</li>
       <li>Switch between embedded color-profile rendering and raw rendering</li>
-      <li>Copy paths, open containing folders, reorder images, and close panes</li>
+      <li>Copy paths, open containing folders, reorder images, and close images</li>
       <li>Load, zoom, and pan efficiently with Qt6 and libvips</li>
     </ul>
   </description>
@@ -64,7 +66,7 @@
     <release version="1.1.3" date="2026-05-18">
       <description>
         <ul>
-          <li>Enable match zoom by default when comparing images with different resolutions</li>
+          <li>Enable relative sync by default when comparing images with different resolutions</li>
           <li>Tighten gaps for a more compact comparison workspace</li>
           <li>Improve libvips image conversion paths for display and heatmap generation</li>
           <li>Add DEB, RPM, and Windows release builds</li>
@@ -85,7 +87,7 @@
       <description>
         <ul>
           <li>Improve zooming and panning performance and eliminate flickers</li>
-          <li>Add active pane selection, focused image view, image reordering, and pane context menu actions</li>
+          <li>Add active image selection, focused image view, image reordering, and image context menu actions</li>
           <li>Add heatmap export to disk</li>
           <li>Changed the heatmap colors and score readouts</li>
           <li>General Bug fixes, performance and UX improvements</li>
