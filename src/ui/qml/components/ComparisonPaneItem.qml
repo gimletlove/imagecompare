@@ -11,8 +11,10 @@ Item {
     property string image_path_value: ""
     property bool source_pane_value: false
     property int display_mode_value: 1
-    property real shared_zoom_factor: 1.0
+    property bool synchronization_locked: false
+    property bool local_best_fit_active: false
     property bool active: false
+    property bool focused: false
     property bool can_move: true
     property alias image_item: pane_image
 
@@ -28,6 +30,7 @@ Item {
     signal open_folder_requested(string path)
     signal move_requested(string entry_id, int direction)
     signal export_heatmap_requested(string entry_id)
+    signal synchronization_lock_toggle_requested(string entry_id)
 
     TapHandler {
         acceptedButtons: Qt.RightButton
@@ -41,6 +44,15 @@ Item {
 
     Menu {
         id: pane_context_menu
+
+        MenuItem {
+            text: "Lock synchronization (L)"
+            checkable: true
+            checked: root.synchronization_locked
+            onTriggered: root.synchronization_lock_toggle_requested(root.entry_id_value)
+        }
+
+        MenuSeparator {}
 
         MenuItem {
             text: "Copy Path (Ctrl+C)"
@@ -157,11 +169,10 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.top: pane_header.bottom
-        anchors.topMargin: 5
+        anchors.topMargin: 4
         anchors.bottom: parent.bottom
         image_path: root.image_path_value
         display_mode: root.display_mode_value
-        zoom_factor: root.shared_zoom_factor
         clip: true
         onActivated: root.activate_requested(root.entry_id_value)
         onZoom_factor_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)

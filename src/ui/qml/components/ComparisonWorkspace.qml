@@ -57,14 +57,19 @@ Item {
     Action {
         id: match_zoom_action
         shortcut: "H"
-        text: "Match Zoom (h)"
+        text: "Relative Sync (h)"
         enabled: panes_grid.can_match_zoom_action
         checkable: true
-        checked: panes_grid.match_zoom_enabled
+        checked: panes_grid.can_match_zoom_action && panes_grid.match_zoom_enabled
         onTriggered: {
             panes_grid.match_zoom_enabled = !panes_grid.match_zoom_enabled
             panes_grid.sync_current_view_now()
         }
+    }
+
+    Shortcut {
+        sequence: "L"
+        onActivated: panes_grid.toggle_lock_active_pane()
     }
 
     Shortcut {

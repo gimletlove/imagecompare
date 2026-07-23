@@ -17,7 +17,9 @@ Use it to compare different versions of the same image, choose the best-quality 
 
 - Open images with drag-and-drop, the file picker, command-line arguments, or file manager **Open With** actions
 - Compare two or more images side by side, stacked, or in a grid layout
-- Synchronize zoom and pan across images, including images with different dimensions
+- Synchronize zoom and pan across all images
+- Lock individual images to inspect them independently from synchronized images
+- Use relative synchronization across different resolutions to keep the same proportional region visible
 - Use stacked view to flip between images in the same position for quick comparison
 - Generate and export perceptual heatmaps from two images to highlight subtle visual differences
 - Switch between embedded color-profile rendering and raw rendering
@@ -33,7 +35,8 @@ Use it to compare different versions of the same image, choose the best-quality 
 | `v` | Toggle stacked view |
 | Arrow keys | Cycle images in stacked view |
 | `Enter` | Focus the active image |
-| `h` | Match zoom and pan |
+| `h` | Toggle relative sync for different resolutions |
+| `l` | Toggle synchronization lock for the active image |
 | `r` | Toggle color-profile / raw rendering |
 | `b` | Build heatmap |
 | `Ctrl+W` | Close active pane |

@@ -12,13 +12,14 @@ Item {
     property string active_entry_id: ""
     property string focused_entry_id: ""
     property alias match_zoom_enabled: interaction_controller.match_zoom_enabled
-    readonly property string zoom_readout: interaction_controller.zoom_readout
+    readonly property string zoom_readout: active_zoom_readout()
     readonly property int pane_count: pane_repeater.count
     readonly property int overlay_source_pane_count: source_pane_count()
+    readonly property int unlocked_pane_count: unlocked_count()
     readonly property bool can_best_fit_action: pane_count > 0
     readonly property bool can_overlay_action: overlay_source_pane_count > 1
-    readonly property bool all_pane_images_same_resolution: panes_share_resolution()
-    readonly property bool can_match_zoom_action: pane_count > 1 && !all_pane_images_same_resolution
+    readonly property bool unlocked_pane_images_same_resolution: unlocked_panes_share_resolution()
+    readonly property bool can_match_zoom_action: unlocked_pane_count > 1 && !unlocked_pane_images_same_resolution
     readonly property int layout_pane_count: effective_pane_count()
     readonly property int column_count: layout_pane_count <= 1 ? 1 : (layout_pane_count === 2 ? 2 : (layout_pane_count === 3 ? 3 : 2))
     readonly property int row_count: layout_pane_count === 0 ? 1 : Math.ceil(layout_pane_count / column_count)
@@ -34,13 +35,24 @@ Item {
         return source_count;
     }
 
-    function panes_share_resolution(): bool {
+    function unlocked_count(): int {
+        let count = 0;
+        for (let index = 0; index < pane_repeater.count; ++index) {
+            const pane = pane_repeater.itemAt(index);
+            if (pane && !pane.synchronization_locked) {
+                count += 1;
+            }
+        }
+        return count;
+    }
+
+    function unlocked_panes_share_resolution(): bool {
         let baseline_width = 0.0;
         let baseline_height = 0.0;
         let comparable_panes = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (!pane) {
+            if (!pane || pane.synchronization_locked) {
                 continue;
             }
             const width = Number(pane.image_pixel_width);
@@ -57,6 +69,12 @@ Item {
             comparable_panes += 1;
         }
         return comparable_panes > 1;
+    }
+
+    function active_zoom_readout(): string {
+        const pane = pane_for_entry_id(active_entry_id);
+        const zoom = pane ? Number(pane.zoom_factor_value) : Number(interaction_controller.shared_zoom_factor);
+        return Math.round(zoom * 100.0) + "%";
     }
 
     function effective_pane_count(): int {
@@ -210,6 +228,30 @@ Item {
         return interaction_controller.sync_current_view_now();
     }
 
+    function toggle_entry_lock(entry_id: string): bool {
+        const pane = pane_for_entry_id(entry_id);
+        if (!pane) {
+            return false;
+        }
+
+        if (!pane.synchronization_locked) {
+            pane.local_best_fit_active = interaction_controller.shared_best_fit_active;
+            pane.synchronization_locked = true;
+            return true;
+        }
+
+        const source_pane = interaction_controller.active_sync_pane(pane);
+        const rejoined = interaction_controller.rejoin_pane(pane, source_pane);
+        pane.synchronization_locked = false;
+        pane.local_best_fit_active = false;
+        return rejoined;
+    }
+
+    function toggle_lock_active_pane(): bool {
+        validate_active_entry();
+        return toggle_entry_lock(active_entry_id);
+    }
+
     function remove_entry(entry_id: string): bool {
         if (!root.controller || !entry_id) {
             return false;
@@ -276,11 +318,8 @@ Item {
     }
 
     function toggle_zoom_fit(): bool {
-        return interaction_controller.toggle_zoom_fit();
-    }
-
-    function set_best_fit(): bool {
-        return interaction_controller.set_best_fit();
+        validate_active_entry();
+        return interaction_controller.toggle_zoom_fit(pane_for_entry_id(active_entry_id));
     }
 
     onPane_countChanged: {
@@ -295,11 +334,7 @@ Item {
         Qt.callLater(validate_active_entry);
     }
     onCan_match_zoom_actionChanged: {
-        if (!can_match_zoom_action && match_zoom_enabled) {
-            match_zoom_enabled = false;
-            sync_current_view_now();
-        } else if (can_match_zoom_action && !match_zoom_enabled) {
-            match_zoom_enabled = true;
+        if (can_match_zoom_action && match_zoom_enabled) {
             Qt.callLater(sync_current_view_now);
         }
     }
@@ -307,6 +342,7 @@ Item {
         normalize_overlay_selection()
         Qt.callLater(validate_active_entry)
     }
+    onLayout_pane_countChanged: interaction_controller.schedule_best_fit_refresh()
     onWidthChanged: interaction_controller.schedule_best_fit_refresh()
     onHeightChanged: interaction_controller.schedule_best_fit_refresh()
 
@@ -343,8 +379,8 @@ Item {
                 image_path_value: imagePath
                 source_pane_value: isSource
                 display_mode_value: root.controller && root.controller.workspace ? root.controller.workspace.display_mode : 1
-                shared_zoom_factor: interaction_controller.shared_zoom_factor
                 active: root.active_entry_id === entry_id_value
+                focused: root.focused_entry_id === entry_id_value
                 can_move: !root.overlay_mode_enabled
                 visible: root.is_pane_visible_in_layout(index, source_pane_value, entry_id_value)
                 width: (pane_grid.width - (pane_grid.columns - 1) * pane_grid.spacing) / pane_grid.columns
@@ -356,8 +392,13 @@ Item {
                 onOpen_folder_requested: path => source_pane_value && root.controller && root.controller.open_containing_folder(path)
                 onMove_requested: (entry_id, direction) => root.move_entry(entry_id, direction)
                 onExport_heatmap_requested: entry_id => root.export_entry_heatmap(entry_id)
-                onView_changed: (pane, zoom_factor, image_center) =>
+                onSynchronization_lock_toggle_requested: entry_id => root.toggle_entry_lock(entry_id)
+                onView_changed: (pane, zoom_factor, image_center) => {
+                    if (pane.synchronization_locked && !interaction_controller.syncing_view_state) {
+                        pane.local_best_fit_active = false;
+                    }
                     interaction_controller.update_shared_from_pane(pane, zoom_factor, image_center)
+                }
             }
         }
     }
