@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(image_compare VERSION 1.2.0 LANGUAGES CXX)
+project(image_compare VERSION 1.2.1 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -46,6 +46,7 @@ add_executable(imagecompare
     src/core/ViewState.cpp
     src/app/WindowDropFilter.cpp
 )
+target_compile_definitions(imagecompare PRIVATE IMAGECOMPARE_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     configure_file(packaging/windows/imagecompare.rc.in imagecompare.rc @ONLY)
     target_sources(imagecompare PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/imagecompare.rc")

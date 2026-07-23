@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
     QApplication app(argc, argv);
     const QStringList launch_arguments = app.arguments().mid(1);
     app.setApplicationName(QStringLiteral("io.github.gimletlove.imagecompare"));
+    app.setApplicationVersion(QStringLiteral(IMAGECOMPARE_VERSION));
     app.setDesktopFileName(QStringLiteral("io.github.gimletlove.imagecompare"));
     app.setWindowIcon(QIcon(QStringLiteral(":/imagecompare.svg")));
 

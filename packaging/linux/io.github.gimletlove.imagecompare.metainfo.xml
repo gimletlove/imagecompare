@@ -34,6 +34,15 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.2.1" date="2026-07-23">
+      <description>
+        <ul>
+          <li>Add option to lock individual images from the synchronized zooming and panning</li>
+          <li>Show the application version in the window title and add the application icon to Windows builds</li>
+          <li>Improve workspace labels, spacing, and tooltips</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.0" date="2026-07-16">
       <description>
         <ul>

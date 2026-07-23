@@ -7,7 +7,7 @@ ApplicationWindow {
     visible: true
     width: 1280
     height: 800
-    title: "Image Compare"
+    title: "Image Compare " + Qt.application.version
 
     DropArea {
         id: drop_area
