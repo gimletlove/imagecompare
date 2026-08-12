@@ -1,5 +1,6 @@
 #include <QApplication>
 #include <QIcon>
+#include <QImageReader>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QWindow>
@@ -9,6 +10,7 @@
 
 int main(int argc, char* argv[]) {
     qputenv("QML_DISK_CACHE", "aot");
+    QImageReader::setAllocationLimit(2000);
 
     QApplication app(argc, argv);
     const QStringList launch_arguments = app.arguments().mid(1);

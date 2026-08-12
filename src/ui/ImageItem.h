@@ -11,15 +11,14 @@
 #include <QtGlobal>
 
 #include "core/ViewState.h"
-#include "core/WorkspaceDocument.h"
-
-struct RenderSpec;
+#include "core/WorkspaceModel.h"
 
 class ImageItem : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
-    Q_PROPERTY(QString image_path READ image_path WRITE set_image_path NOTIFY image_path_changed)
-    Q_PROPERTY(int display_mode READ display_mode WRITE set_display_mode NOTIFY display_mode_changed)
+    Q_PROPERTY(QString source_path READ source_path WRITE set_source_path)
+    Q_PROPERTY(QImage input_image READ input_image WRITE set_input_image)
+    Q_PROPERTY(int color_mode READ color_mode WRITE set_color_mode)
     Q_PROPERTY(double zoom_factor READ zoom_factor WRITE set_zoom_factor NOTIFY zoom_factor_changed)
     Q_PROPERTY(QPointF image_center READ image_center WRITE set_image_center NOTIFY image_center_changed)
     Q_PROPERTY(QSize image_pixel_size READ image_pixel_size NOTIFY image_pixel_size_changed)
@@ -27,10 +26,12 @@ class ImageItem : public QQuickItem {
    public:
     explicit ImageItem(QQuickItem* parent = nullptr);
 
-    [[nodiscard]] QString image_path() const;
-    void set_image_path(QString path);
-    [[nodiscard]] int display_mode() const noexcept;
-    void set_display_mode(int mode);
+    [[nodiscard]] QString source_path() const;
+    void set_source_path(QString path);
+    [[nodiscard]] QImage input_image() const;
+    void set_input_image(QImage image);
+    [[nodiscard]] int color_mode() const noexcept;
+    void set_color_mode(int mode);
 
     [[nodiscard]] double zoom_factor() const noexcept;
     void set_zoom_factor(double value);
@@ -43,8 +44,6 @@ class ImageItem : public QQuickItem {
     [[nodiscard]] Q_INVOKABLE double best_fit_zoom() const noexcept;
 
    Q_SIGNALS:
-    void image_path_changed();
-    void display_mode_changed();
     void zoom_factor_changed();
     void image_center_changed();
     void image_pixel_size_changed();
@@ -61,18 +60,19 @@ class ImageItem : public QQuickItem {
 
    private:
     void clear_image();
-    void request_image_render(quint64 generation, QString image_path, RenderSpec spec);
+    void load_effective_image();
+    void request_decode(quint64 generation, QString source_path, bool apply_color_profile);
     [[nodiscard]] QRectF visible_image_rect() const;
     [[nodiscard]] QPointF viewport_point_in_pixels(const QPointF& point) const noexcept;
     void update_viewport_size();
 
-    QString m_image_path;
-    DisplayMode m_display_mode = DisplayMode::Faithful;
-    QSize m_image_size;
+    QString m_source_path;
+    QImage m_input_image;
+    ColorMode m_color_mode = ColorMode::Faithful;
+    QSize m_pixel_size;
     ViewState m_view_state;
     QImage m_image;
-    quint64 m_scene_generation = 0;
-    quint64 m_image_generation = 0;
+    quint64 m_load_generation = 0;
     qreal m_device_pixel_ratio = 1.0;
     bool m_dragging = false;
     QPointF m_last_drag_position;

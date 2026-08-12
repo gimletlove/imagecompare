@@ -29,11 +29,11 @@ Item {
     }
 
     Action {
-        id: display_mode_action
+        id: color_mode_action
         shortcut: "R"
-        text: (root.controller && root.controller.workspace && root.controller.workspace.display_mode === 0 ? "Raw" : "Faithful") + " (r)"
+        text: (root.controller && root.controller.workspace && root.controller.workspace.color_mode === 0 ? "Raw" : "Faithful") + " (r)"
         enabled: panes_grid.can_best_fit_action
-        onTriggered: root.controller.toggle_display_mode()
+        onTriggered: root.controller.toggle_color_mode()
     }
 
     Action {
@@ -148,7 +148,7 @@ Item {
                 }
 
                 ToolButton {
-                    action: display_mode_action
+                    action: color_mode_action
                     ToolTip.delay: 300
                     ToolTip.visible: hovered
                     ToolTip.text: "Faithful uses color profile metadata; Raw ignores color profile metadata"
@@ -188,7 +188,7 @@ Item {
             PanesGrid {
                 id: panes_grid
                 anchors.fill: parent
-                model: root.controller ? root.controller.workspace.entries_model : null
+                model: root.controller ? root.controller.workspace : null
                 controller: root.controller
             }
 

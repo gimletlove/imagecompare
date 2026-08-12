@@ -28,7 +28,7 @@ Item {
         let source_count = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (pane && pane.source_pane_value) {
+            if (pane && pane.is_source) {
                 source_count += 1;
             }
         }
@@ -55,8 +55,8 @@ Item {
             if (!pane || pane.synchronization_locked) {
                 continue;
             }
-            const width = Number(pane.image_pixel_width);
-            const height = Number(pane.image_pixel_height);
+            const width = Number(pane.image_item.image_pixel_size.width);
+            const height = Number(pane.image_item.image_pixel_size.height);
             if (width <= 0.0 || height <= 0.0) {
                 return false;
             }
@@ -73,7 +73,7 @@ Item {
 
     function active_zoom_readout(): string {
         const pane = pane_for_entry_id(active_entry_id);
-        const zoom = pane ? Number(pane.zoom_factor_value) : Number(interaction_controller.shared_zoom_factor);
+        const zoom = pane ? Number(pane.image_item.zoom_factor) : Number(interaction_controller.shared_zoom_factor);
         return Math.round(zoom * 100.0) + "%";
     }
 
@@ -91,7 +91,7 @@ Item {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.source_pane_value) {
+            if (!pane || !pane.is_source) {
                 continue;
             }
             if (index === repeater_index) {
@@ -106,10 +106,10 @@ Item {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.source_pane_value) {
+            if (!pane || !pane.is_source) {
                 continue;
             }
-            if (pane.entry_id_value === entry_id) {
+            if (pane.entry_id === entry_id) {
                 return source_ordinal;
             }
             source_ordinal += 1;
@@ -121,11 +121,11 @@ Item {
         let source_ordinal = 0;
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.source_pane_value) {
+            if (!pane || !pane.is_source) {
                 continue;
             }
             if (source_ordinal === target_ordinal) {
-                return pane.entry_id_value;
+                return pane.entry_id;
             }
             source_ordinal += 1;
         }
@@ -135,7 +135,7 @@ Item {
     function pane_for_entry_id(entry_id: string): var {
         for (let index = 0; index < pane_repeater.count; ++index) {
             const pane = pane_repeater.itemAt(index);
-            if (pane && pane.entry_id_value === entry_id) {
+            if (pane && pane.entry_id === entry_id) {
                 return pane;
             }
         }
@@ -151,7 +151,7 @@ Item {
         }
 
         const next_pane = interaction_controller.first_visible_pane();
-        active_entry_id = next_pane ? next_pane.entry_id_value : "";
+        active_entry_id = next_pane ? next_pane.entry_id : "";
     }
 
     function activate_entry(entry_id: string): bool {
@@ -161,7 +161,7 @@ Item {
         }
 
         active_entry_id = entry_id;
-        if (overlay_mode_enabled && pane.source_pane_value) {
+        if (overlay_mode_enabled && pane.is_source) {
             const source_ordinal = source_ordinal_for_entry_id(entry_id);
             if (source_ordinal >= 0) {
                 active_overlay_source_index = source_ordinal;
@@ -201,7 +201,7 @@ Item {
         normalize_overlay_selection();
         if (overlay_mode_enabled) {
             const active_pane = pane_for_entry_id(active_entry_id);
-            if (active_pane && active_pane.source_pane_value) {
+            if (active_pane && active_pane.is_source) {
                 const source_ordinal = source_ordinal_for_entry_id(active_entry_id);
                 if (source_ordinal >= 0) {
                     active_overlay_source_index = source_ordinal;
@@ -292,7 +292,7 @@ Item {
     function copy_active_path(): bool {
         validate_active_entry();
         const pane = pane_for_entry_id(active_entry_id);
-        return pane && pane.source_pane_value && root.controller ? root.controller.copy_path_to_clipboard(pane.image_path_value) : false;
+        return pane && pane.is_source && root.controller ? root.controller.copy_path_to_clipboard(pane.source_path) : false;
     }
 
     function export_entry_heatmap(entry_id: string): bool {
@@ -367,29 +367,26 @@ Item {
 
             delegate: ComparisonPaneItem {
                 required property int index
-                required property string primaryHeader
-                required property string secondaryHeader
-                required property string entryId
-                required property string imagePath
-                required property bool isSource
+                required property var model
 
-                primary_header_text: primaryHeader
-                secondary_header_text: secondaryHeader
-                entry_id_value: entryId
-                image_path_value: imagePath
-                source_pane_value: isSource
-                display_mode_value: root.controller && root.controller.workspace ? root.controller.workspace.display_mode : 1
-                active: root.active_entry_id === entry_id_value
-                focused: root.focused_entry_id === entry_id_value
+                title: model.title
+                subtitle: model.subtitle
+                entry_id: model.entryId
+                source_path: model.sourcePath
+                input_image: model.heatmapImage
+                is_source: model.isSource
+                color_mode: root.controller && root.controller.workspace ? root.controller.workspace.color_mode : 1
+                active: root.active_entry_id === entry_id
+                focused: root.focused_entry_id === entry_id
                 can_move: !root.overlay_mode_enabled
-                visible: root.is_pane_visible_in_layout(index, source_pane_value, entry_id_value)
+                visible: root.is_pane_visible_in_layout(index, is_source, entry_id)
                 width: (pane_grid.width - (pane_grid.columns - 1) * pane_grid.spacing) / pane_grid.columns
                 height: (pane_grid.height - (root.row_count - 1) * pane_grid.spacing) / root.row_count
                 clip: true
                 onRemove_requested: entry_id => root.remove_entry(entry_id)
                 onActivate_requested: entry_id => root.activate_entry(entry_id)
-                onCopy_path_requested: path => source_pane_value && root.controller && root.controller.copy_path_to_clipboard(path)
-                onOpen_folder_requested: path => source_pane_value && root.controller && root.controller.open_containing_folder(path)
+                onCopy_path_requested: path => is_source && root.controller && root.controller.copy_path_to_clipboard(path)
+                onOpen_folder_requested: path => is_source && root.controller && root.controller.open_containing_folder(path)
                 onMove_requested: (entry_id, direction) => root.move_entry(entry_id, direction)
                 onExport_heatmap_requested: entry_id => root.export_entry_heatmap(entry_id)
                 onSynchronization_lock_toggle_requested: entry_id => root.toggle_entry_lock(entry_id)

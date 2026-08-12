@@ -3,25 +3,17 @@
 #include <QImage>
 #include <QSize>
 #include <QString>
-#include <vips/vips8>
-
-struct RenderSpec {
-    bool ignore_color_profile = false;
-};
 
 class ImageSource {
    public:
     explicit ImageSource(const QString& path);
 
-    [[nodiscard]] static bool supported_image_path(const QString& path);
-    [[nodiscard]] static vips::VImage load_for_render(const QString& path, const RenderSpec& spec);
-
     [[nodiscard]] const QString& path() const noexcept;
     [[nodiscard]] QSize pixel_size() const;
-    [[nodiscard]] QImage render(const RenderSpec& spec) const;
+    [[nodiscard]] QImage decode(bool apply_color_profile) const;
 
    private:
-    [[nodiscard]] static QString normalized_path_for_source(const QString& path);
+    [[nodiscard]] static QString normalized_path(const QString& path);
 
     QString m_path;
 };

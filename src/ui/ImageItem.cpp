@@ -1,16 +1,12 @@
 #include "ui/ImageItem.h"
 
-#include <vips/vips.h>
-
 #include <QDebug>
 #include <QMetaObject>
 #include <QMouseEvent>
 #include <QPointer>
 #include <QQuickWindow>
-#include <QRunnable>
 #include <QSGSimpleTextureNode>
 #include <QSGTexture>
-#include <QScopeGuard>
 #include <QThread>
 #include <QThreadPool>
 #include <QWheelEvent>
@@ -23,10 +19,10 @@
 
 namespace {
     struct ImageTextureNode final : public QSGSimpleTextureNode {
-        quint64 generation = 0;
+        qint64 image_cache_key = 0;
     };
 
-    QThreadPool& image_render_thread_pool() {
+    QThreadPool& decode_thread_pool() {
         static QThreadPool pool;
         static const int configured = [] {
             const int ideal_threads = std::max(1, QThread::idealThreadCount());
@@ -44,73 +40,79 @@ ImageItem::ImageItem(QQuickItem* parent) : QQuickItem(parent) {
     setAcceptedMouseButtons(Qt::LeftButton);
 }
 
-QString ImageItem::image_path() const { return m_image_path; }
+QString ImageItem::source_path() const { return m_source_path; }
+
+QImage ImageItem::input_image() const { return m_input_image; }
 
 void ImageItem::clear_image() {
     m_image = {};
-    m_image_generation = 0;
     update();
 }
 
-void ImageItem::set_image_path(QString path) {
-    if (path == m_image_path) {
+void ImageItem::set_source_path(QString path) {
+    if (path == m_source_path) {
         return;
     }
-
-    const QSize previous_image_size = m_image_size;
-    m_image_path = std::move(path);
-    ++m_scene_generation;
-    clear_image();
-    m_image_size = {};
-
-    if (!m_image_path.isEmpty()) {
-        try {
-            ImageSource source(m_image_path);
-            m_image_size = source.pixel_size();
-            m_view_state.set_image_size(QSizeF(m_image_size));
-            m_view_state.center_on(QPointF(m_image_size.width() / 2.0, m_image_size.height() / 2.0));
-            Q_EMIT image_center_changed();
-
-            const RenderSpec spec{.ignore_color_profile = m_display_mode == DisplayMode::StrictRaw};
-            request_image_render(m_scene_generation, m_image_path, spec);
-        } catch (const std::exception& ex) {
-            qWarning().noquote() << "Failed to load image" << m_image_path << ":" << ex.what();
-            m_view_state.set_image_size({});
-            m_view_state.center_on({});
-            Q_EMIT image_center_changed();
-        }
-    } else {
-        m_view_state.set_image_size({});
-        m_view_state.center_on({});
-        Q_EMIT image_center_changed();
-    }
-
-    Q_EMIT image_path_changed();
-    if (m_image_size != previous_image_size) {
-        Q_EMIT image_pixel_size_changed();
+    m_source_path = std::move(path);
+    ++m_load_generation;
+    if (m_input_image.isNull()) {
+        load_effective_image();
     }
 }
 
-int ImageItem::display_mode() const noexcept { return static_cast<int>(m_display_mode); }
+void ImageItem::set_input_image(QImage image) {
+    if (image.cacheKey() == m_input_image.cacheKey()) {
+        return;
+    }
+    m_input_image = std::move(image);
+    ++m_load_generation;
+    load_effective_image();
+}
 
-void ImageItem::set_display_mode(int mode) {
-    if (mode < static_cast<int>(DisplayMode::StrictRaw) || mode > static_cast<int>(DisplayMode::Faithful)) {
+int ImageItem::color_mode() const noexcept { return static_cast<int>(m_color_mode); }
+
+void ImageItem::set_color_mode(int mode) {
+    if (mode < static_cast<int>(ColorMode::Raw) || mode > static_cast<int>(ColorMode::Faithful)) {
         return;
     }
 
-    const auto display_mode = static_cast<DisplayMode>(mode);
-    if (display_mode == m_display_mode) {
+    const auto color_mode = static_cast<ColorMode>(mode);
+    if (color_mode == m_color_mode) {
         return;
     }
 
-    m_display_mode = display_mode;
-    ++m_scene_generation;
+    m_color_mode = color_mode;
+    if (m_input_image.isNull() && !m_source_path.isEmpty() && m_pixel_size.isValid()) {
+        ++m_load_generation;
+        clear_image();
+        request_decode(m_load_generation, m_source_path, m_color_mode == ColorMode::Faithful);
+    }
+}
+
+void ImageItem::load_effective_image() {
+    const QSize previous_pixel_size = m_pixel_size;
     clear_image();
-    if (!m_image_path.isEmpty() && m_image_size.isValid()) {
-        const RenderSpec spec{.ignore_color_profile = m_display_mode == DisplayMode::StrictRaw};
-        request_image_render(m_scene_generation, m_image_path, spec);
+    m_pixel_size = {};
+
+    if (!m_input_image.isNull()) {
+        m_image = m_input_image;
+        m_pixel_size = m_image.size();
+    } else if (!m_source_path.isEmpty()) {
+        try {
+            const ImageSource source(m_source_path);
+            m_pixel_size = source.pixel_size();
+            request_decode(m_load_generation, m_source_path, m_color_mode == ColorMode::Faithful);
+        } catch (const std::exception& ex) {
+            qWarning().noquote() << "Failed to load image" << m_source_path << ":" << ex.what();
+        }
     }
-    Q_EMIT display_mode_changed();
+
+    m_view_state.set_image_size(QSizeF(m_pixel_size));
+    m_view_state.center_on(m_pixel_size.isValid() ? QPointF(m_pixel_size.width() / 2.0, m_pixel_size.height() / 2.0) : QPointF{});
+    Q_EMIT image_center_changed();
+    if (m_pixel_size != previous_pixel_size) {
+        Q_EMIT image_pixel_size_changed();
+    }
 }
 
 void ImageItem::geometryChange(const QRectF& new_geometry, const QRectF& old_geometry) {
@@ -133,8 +135,8 @@ void ImageItem::itemChange(ItemChange change, const ItemChangeData& value) {
 
 void ImageItem::update_viewport_size() {
     m_view_state.set_viewport_size(QSizeF(width() * m_device_pixel_ratio, height() * m_device_pixel_ratio));
-    if (m_view_state.image_center().isNull() && m_image_size.isValid()) {
-        m_view_state.center_on(QPointF(m_image_size.width() / 2.0, m_image_size.height() / 2.0));
+    if (m_view_state.image_center().isNull() && m_pixel_size.isValid()) {
+        m_view_state.center_on(QPointF(m_pixel_size.width() / 2.0, m_pixel_size.height() / 2.0));
         Q_EMIT image_center_changed();
     }
     update();
@@ -164,7 +166,7 @@ void ImageItem::set_image_center(const QPointF& center_point) {
     Q_EMIT image_center_changed();
 }
 
-QSize ImageItem::image_pixel_size() const noexcept { return m_image_size; }
+QSize ImageItem::image_pixel_size() const noexcept { return m_pixel_size; }
 
 QPointF ImageItem::viewport_point_in_pixels(const QPointF& point) const noexcept { return point * m_device_pixel_ratio; }
 
@@ -203,8 +205,8 @@ void ImageItem::set_best_fit() {
     const QPointF previous_center = m_view_state.image_center();
     const double previous_zoom = m_view_state.zoom_factor();
     m_view_state.set_zoom_factor(m_view_state.best_fit_zoom());
-    if (m_image_size.isValid()) {
-        m_view_state.center_on(QPointF(m_image_size.width() / 2.0, m_image_size.height() / 2.0));
+    if (m_pixel_size.isValid()) {
+        m_view_state.center_on(QPointF(m_pixel_size.width() / 2.0, m_pixel_size.height() / 2.0));
     }
     update();
     if (!qFuzzyCompare(previous_zoom, m_view_state.zoom_factor())) {
@@ -224,7 +226,8 @@ QSGNode* ImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*) {
         return nullptr;
     }
 
-    if (node == nullptr || node->generation != m_image_generation) {
+    const qint64 image_cache_key = m_image.cacheKey();
+    if (node == nullptr || node->image_cache_key != image_cache_key) {
         delete node;
         node = new ImageTextureNode();
 
@@ -240,7 +243,7 @@ QSGNode* ImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*) {
 
         node->setOwnsTexture(true);
         node->setTexture(texture);
-        node->generation = m_image_generation;
+        node->image_cache_key = image_cache_key;
     }
 
     const double zoom = m_view_state.zoom_factor();
@@ -303,16 +306,14 @@ QRectF ImageItem::visible_image_rect() const {
                   visible_size.height());
 }
 
-void ImageItem::request_image_render(quint64 generation, QString image_path, RenderSpec spec) {
+void ImageItem::request_decode(quint64 generation, QString source_path, bool apply_color_profile) {
     QPointer<ImageItem> item_guard(this);
 
-    auto task = QRunnable::create([item_guard, generation, image_path = std::move(image_path), spec]() {
-        const auto vips_thread_guard = qScopeGuard([] { vips_thread_shutdown(); });
-
+    decode_thread_pool().start([item_guard, generation, source_path = std::move(source_path), apply_color_profile]() {
         QImage image;
         QString error_text;
         try {
-            image = ImageSource(image_path).render(spec);
+            image = ImageSource(source_path).decode(apply_color_profile);
         } catch (const std::exception& ex) {
             error_text = QString::fromUtf8(ex.what());
         }
@@ -323,25 +324,23 @@ void ImageItem::request_image_render(quint64 generation, QString image_path, Ren
 
         QMetaObject::invokeMethod(
             item_guard,
-            [item_guard, generation, image_path, image, error_text]() {
+            [item_guard, generation, source_path, image, error_text]() {
                 if (item_guard == nullptr) {
                     return;
                 }
-                if (generation != item_guard->m_scene_generation) {
+                if (generation != item_guard->m_load_generation || !item_guard->m_input_image.isNull()) {
                     return;
                 }
 
                 if (image.isNull()) {
-                    qWarning().noquote() << "Failed to render image" << image_path << ":"
+                    qWarning().noquote() << "Failed to decode image" << source_path << ":"
                                          << (error_text.isEmpty() ? QStringLiteral("empty image") : error_text);
                     return;
                 }
 
                 item_guard->m_image = image;
-                item_guard->m_image_generation = generation;
                 item_guard->update();
             },
             Qt::QueuedConnection);
     });
-    image_render_thread_pool().start(task);
 }

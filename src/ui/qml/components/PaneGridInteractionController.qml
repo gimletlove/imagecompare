@@ -72,10 +72,10 @@ QtObject {
                 }
             }
 
-            const source_width = Number(source_pane.image_pixel_width);
-            const source_height = Number(source_pane.image_pixel_height);
-            const target_width = Number(target_pane.image_pixel_width);
-            const target_height = Number(target_pane.image_pixel_height);
+            const source_width = Number(source_pane.image_item.image_pixel_size.width);
+            const source_height = Number(source_pane.image_item.image_pixel_size.height);
+            const target_width = Number(target_pane.image_item.image_pixel_size.width);
+            const target_height = Number(target_pane.image_item.image_pixel_size.height);
             if (source_width > 0.0 && source_height > 0.0 && target_width > 0.0 && target_height > 0.0) {
                 const normalized_x = center_point.x / source_width;
                 const normalized_y = center_point.y / source_height;
@@ -90,7 +90,7 @@ QtObject {
 
     function rejoin_pane(pane, source_pane): bool {
         if (!source_pane) {
-            shared_zoom_factor = Number(pane.zoom_factor_value);
+            shared_zoom_factor = Number(pane.image_item.zoom_factor);
             shared_best_fit_active = pane.local_best_fit_active;
             last_sync_source_pane = pane;
             return true;
@@ -100,9 +100,9 @@ QtObject {
         if (shared_best_fit_active) {
             pane.image_item.set_best_fit();
         } else {
-            set_pane_from_source(source_pane, pane, source_pane.zoom_factor_value, source_pane.image_center_value);
+            set_pane_from_source(source_pane, pane, source_pane.image_item.zoom_factor, source_pane.image_item.image_center);
         }
-        shared_zoom_factor = Number(source_pane.zoom_factor_value);
+        shared_zoom_factor = Number(source_pane.image_item.zoom_factor);
         last_sync_source_pane = source_pane;
         syncing_view_state = false;
         return true;
@@ -113,7 +113,7 @@ QtObject {
         if (!source_pane) {
             return false;
         }
-        update_shared_from_pane(source_pane, source_pane.zoom_factor_value, source_pane.image_center_value);
+        update_shared_from_pane(source_pane, source_pane.image_item.zoom_factor, source_pane.image_item.image_center);
         return true;
     }
 
@@ -151,7 +151,7 @@ QtObject {
 
         if (match_zoom_enabled) {
             source_pane.image_item.zoom_factor = 1.0;
-            update_shared_from_pane(source_pane, source_pane.zoom_factor_value, source_pane.image_center_value);
+            update_shared_from_pane(source_pane, source_pane.image_item.zoom_factor, source_pane.image_item.image_center);
             return true;
         }
 
@@ -166,7 +166,7 @@ QtObject {
         }
         syncing_view_state = false;
 
-        shared_zoom_factor = Number(source_pane.zoom_factor_value);
+        shared_zoom_factor = Number(source_pane.image_item.zoom_factor);
         last_sync_source_pane = source_pane;
         return true;
     }
@@ -194,7 +194,7 @@ QtObject {
         }
         syncing_view_state = false;
 
-        shared_zoom_factor = Number(source_pane.zoom_factor_value);
+        shared_zoom_factor = Number(source_pane.image_item.zoom_factor);
         last_sync_source_pane = source_pane;
         return true;
     }
@@ -205,7 +205,7 @@ QtObject {
             return false;
         }
 
-        const current_zoom = Number(source_pane.zoom_factor_value);
+        const current_zoom = Number(source_pane.image_item.zoom_factor);
         const best_fit_zoom = Number(source_pane.image_item.best_fit_zoom());
         if (best_fit_zoom > 0.0 && Math.abs(current_zoom - best_fit_zoom) <= Math.max(0.001, best_fit_zoom * 0.01)) {
             return set_zoom100(source_pane);
@@ -229,7 +229,7 @@ QtObject {
 
         const source_pane = active_sync_pane();
         if (source_pane && shared_best_fit_active) {
-            shared_zoom_factor = Number(source_pane.zoom_factor_value);
+            shared_zoom_factor = Number(source_pane.image_item.zoom_factor);
             last_sync_source_pane = source_pane;
         }
     }

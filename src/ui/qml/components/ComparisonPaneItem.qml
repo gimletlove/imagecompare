@@ -5,23 +5,19 @@ import ImageCompare 1.0
 
 Item {
     id: root
-    property string primary_header_text: ""
-    property string secondary_header_text: ""
-    property string entry_id_value: ""
-    property string image_path_value: ""
-    property bool source_pane_value: false
-    property int display_mode_value: 1
+    property string title: ""
+    property string subtitle: ""
+    property string entry_id: ""
+    property alias source_path: pane_image.source_path
+    property alias input_image: pane_image.input_image
+    property bool is_source: false
+    property alias color_mode: pane_image.color_mode
     property bool synchronization_locked: false
     property bool local_best_fit_active: false
     property bool active: false
     property bool focused: false
     property bool can_move: true
     property alias image_item: pane_image
-
-    readonly property real zoom_factor_value: pane_image.zoom_factor
-    readonly property point image_center_value: pane_image.image_center
-    readonly property real image_pixel_width: pane_image.image_pixel_size.width
-    readonly property real image_pixel_height: pane_image.image_pixel_size.height
 
     signal remove_requested(string entry_id)
     signal activate_requested(string entry_id)
@@ -35,7 +31,7 @@ Item {
     TapHandler {
         acceptedButtons: Qt.RightButton
         onTapped: function(eventPoint, button) {
-            root.activate_requested(root.entry_id_value)
+            root.activate_requested(root.entry_id)
             pane_context_menu.x = eventPoint.position.x
             pane_context_menu.y = eventPoint.position.y
             pane_context_menu.open()
@@ -49,59 +45,59 @@ Item {
             text: "Lock synchronization (L)"
             checkable: true
             checked: root.synchronization_locked
-            onTriggered: root.synchronization_lock_toggle_requested(root.entry_id_value)
+            onTriggered: root.synchronization_lock_toggle_requested(root.entry_id)
         }
 
         MenuSeparator {}
 
         MenuItem {
             text: "Copy Path (Ctrl+C)"
-            visible: root.source_pane_value
+            visible: root.is_source
             height: visible ? implicitHeight : 0
-            onTriggered: root.copy_path_requested(root.image_path_value)
+            onTriggered: root.copy_path_requested(root.source_path)
         }
 
         MenuItem {
             text: "Open Containing Folder"
-            visible: root.source_pane_value
+            visible: root.is_source
             height: visible ? implicitHeight : 0
-            onTriggered: root.open_folder_requested(root.image_path_value)
+            onTriggered: root.open_folder_requested(root.source_path)
         }
 
         MenuSeparator {
-            visible: root.source_pane_value
+            visible: root.is_source
             height: visible ? implicitHeight : 0
         }
 
         MenuItem {
             text: "Move Left (Ctrl+Left)"
             enabled: root.can_move
-            onTriggered: root.move_requested(root.entry_id_value, -1)
+            onTriggered: root.move_requested(root.entry_id, -1)
         }
 
         MenuItem {
             text: "Move Right (Ctrl+Right)"
             enabled: root.can_move
-            onTriggered: root.move_requested(root.entry_id_value, 1)
+            onTriggered: root.move_requested(root.entry_id, 1)
         }
 
         MenuSeparator {
-            visible: !root.source_pane_value
+            visible: !root.is_source
             height: visible ? implicitHeight : 0
         }
 
         MenuItem {
             text: "Export Heatmap"
-            visible: !root.source_pane_value
+            visible: !root.is_source
             height: visible ? implicitHeight : 0
-            onTriggered: root.export_heatmap_requested(root.entry_id_value)
+            onTriggered: root.export_heatmap_requested(root.entry_id)
         }
 
         MenuSeparator {}
 
         MenuItem {
             text: "Close File (Ctrl+W)"
-            onTriggered: root.remove_requested(root.entry_id_value)
+            onTriggered: root.remove_requested(root.entry_id)
         }
     }
 
@@ -113,10 +109,10 @@ Item {
         implicitHeight: 26
         height: implicitHeight
 
-        readonly property bool has_secondary_in_display: root.secondary_header_text.trim().length > 0
+        readonly property bool has_secondary_in_display: root.subtitle.trim().length > 0
         readonly property string full_header_tool_tip_text: has_secondary_in_display
-            ? root.primary_header_text + " • " + root.secondary_header_text.trim()
-            : root.primary_header_text
+            ? root.title + " • " + root.subtitle.trim()
+            : root.title
 
         RowLayout {
             anchors.fill: parent
@@ -170,7 +166,7 @@ Item {
                 ToolTip.delay: 300
                 ToolTip.visible: hovered
                 ToolTip.text: "Remove image"
-                onClicked: root.remove_requested(root.entry_id_value)
+                onClicked: root.remove_requested(root.entry_id)
             }
         }
     }
@@ -201,10 +197,8 @@ Item {
         anchors.top: pane_header.bottom
         anchors.topMargin: 4
         anchors.bottom: parent.bottom
-        image_path: root.image_path_value
-        display_mode: root.display_mode_value
         clip: true
-        onActivated: root.activate_requested(root.entry_id_value)
+        onActivated: root.activate_requested(root.entry_id)
         onZoom_factor_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
         onImage_center_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
     }

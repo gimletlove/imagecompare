@@ -28,8 +28,7 @@ if(IMAGECOMPARE_FLATPAK)
     find_package(KF6CoreAddons REQUIRED)
 endif()
 
-find_package(PkgConfig REQUIRED)
-pkg_check_modules(VIPSCPP REQUIRED IMPORTED_TARGET vips-cpp)
+add_subdirectory(third_party/ssim EXCLUDE_FROM_ALL)
 
 if(QT_KNOWN_POLICY_QTP0004)
     qt_policy(SET QTP0004 NEW)
@@ -37,11 +36,9 @@ endif()
 
 add_executable(imagecompare
     src/app/main.cpp
-    src/core/WorkspaceDocument.cpp
-    src/core/ViewableImageEntry.cpp
-    src/core/ViewableImageListModel.cpp
+    src/core/WorkspaceModel.cpp
     src/core/ImageSource.cpp
-    src/core/ComparisonJobQueue.cpp
+    src/core/ImageComparison.cpp
     src/app/ApplicationController.cpp
     src/core/ViewState.cpp
     src/app/WindowDropFilter.cpp
@@ -101,7 +98,7 @@ target_link_libraries(imagecompare
         Qt6::Quick
         Qt6::QuickControls2
         Qt6::Widgets
-        PkgConfig::VIPSCPP
+        rmgr-ssim
 )
 
 if(IMAGECOMPARE_FLATPAK)
@@ -126,6 +123,10 @@ if(UNIX AND NOT APPLE)
     install(FILES LICENSE.txt
         DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/imagecompare
     )
+    install(FILES third_party/ssim/LICENSE
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/imagecompare
+        RENAME LICENSE-rmgr-ssim.txt
+    )
 endif()
 
 set(CPACK_PACKAGE_NAME "imagecompare")
@@ -134,18 +135,25 @@ set(CPACK_PACKAGE_CONTACT "gimletlove <gimletlove@users.noreply.github.com>")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/gimletlove/imagecompare")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Image comparison and visual diff tool")
 set(CPACK_PACKAGE_DESCRIPTION
-    "Image Compare lets you inspect two or more images side by side, in a stacked view, or with a heatmap of perceptual differences. Zoom and pan stay synchronized across images, with relative synchronization across different resolutions. It also supports grid layouts, multiple image formats, faithful color-profile rendering, and fast image loading with Qt6 and libvips."
+    "Image Compare lets you inspect two or more images side by side, in a stacked view, or with a structural-similarity heatmap. Zoom and pan stay synchronized across images, with relative synchronization across different resolutions. It also supports grid layouts, multiple image formats, faithful color-profile rendering, and image loading through Qt 6."
 )
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_GENERATOR "DEB;RPM")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "qml6-module-qtqml-workerscript, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window"
+    "qt6-svg-plugins, qml6-module-qtqml-workerscript, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window"
+)
+set(CPACK_DEBIAN_PACKAGE_SUGGESTS
+    "qt6-image-formats-plugins, kimageformat6-plugins"
 )
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtsvg")
+set(CPACK_RPM_PACKAGE_SUGGESTS
+    "qt6-qtimageformats, kf6-kimageformats"
+)
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 include(CPack)
