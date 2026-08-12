@@ -5,7 +5,7 @@
 [![AUR](https://img.shields.io/aur/version/imagecompare-bin?label=AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
 
-**Image Compare** is a desktop image comparison and visual diff tool for Linux and Windows. It compares two or more images side by side, in a stacked view, or in a grid layout, and can generate perceptual heatmaps to highlight visual differences between two images.
+**Image Compare** is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, in a stacked view, or in a grid layout, and generate luminance SSIM heatmaps to highlight structural differences between two images.
 
 Use it to compare different versions of the same image, choose the best-quality copy from multiple sources, check compression artifacts, inspect scans or image exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.
 
@@ -15,16 +15,15 @@ Use it to compare different versions of the same image, choose the best-quality 
 
 ## Features
 
-- Open images with drag-and-drop, the file picker, command-line arguments, or file manager **Open With** actions
-- Compare two or more images side by side, stacked, or in a grid layout
+- Open images using drag-and-drop, the file picker, command-line arguments, or a file manager’s **Open With** action
+- Compare two or more images side by side, in a stacked view, or in a grid layout
 - Synchronize zoom and pan across all images
-- Lock individual images to inspect them independently from synchronized images
-- Use relative synchronization across different resolutions to keep the same proportional region visible
-- Use stacked view to flip between images in the same position for quick comparison
-- Generate and export perceptual heatmaps from two images to highlight subtle visual differences
-- Switch between embedded color-profile rendering and raw rendering
-- Copy image paths, open containing folders, move images, and close files from image context menus
-- Load, zoom, and pan images efficiently with Qt6 and libvips
+- Use relative synchronization to keep the same proportional region visible across different resolutions
+- Lock individual images to zoom and pan them independently
+- Flip between images in the same position using stacked view
+- Generate and export luminance SSIM heatmaps to highlight structural differences between two images
+- Switch between color-managed rendering using embedded profiles and raw rendering
+- Copy image paths, open containing folders, and close files from image context menus
 
 ## Keyboard Shortcuts
 
@@ -48,11 +47,11 @@ Use it to compare different versions of the same image, choose the best-quality 
 
 Download release builds from the [GitHub Releases page](https://github.com/gimletlove/imagecompare/releases).
 
-Available release artifacts include:
+Available release builds:
 
 - Linux DEB package for Debian and Ubuntu-based distributions
 - Linux RPM package for Fedora and RPM-based distributions
-- Linux install-tree zip
+- Linux portable zip
 - Windows x86_64 portable zip
 - Source tarball
 
@@ -80,18 +79,9 @@ Local source builds are intended for Linux. Windows packages are produced by the
 
 Build requirements:
 
-* C++20 compiler
-* CMake 3.21+
-* Qt6
-* libvips and vips-cpp
-
-Check installed dependency versions:
-
-```bash
-pkg-config --modversion Qt6Core
-pkg-config --modversion vips
-pkg-config --modversion vips-cpp
-```
+- C++20 compiler
+- CMake 3.21+
+- Qt 6
 
 Build and run:
 
@@ -100,15 +90,6 @@ cmake -S . -B build
 cmake --build build
 ./build/imagecompare
 ```
-
-Flatpak builds can enable portal integration with:
-
-```bash
-cmake -S . -B build-flatpak -DIMAGECOMPARE_FLATPAK=ON
-cmake --build build-flatpak
-```
-
-Flatpak builds also require Qt6 DBus and KDE Frameworks 6 CoreAddons.
 
 ## Project Links
 

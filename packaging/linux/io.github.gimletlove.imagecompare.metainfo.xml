@@ -10,17 +10,18 @@
     <name>gimletlove</name>
   </developer>
   <description>
-    <p>Image Compare is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, stacked, or in a grid with synchronized zoom and pan, and generate perceptual heatmaps to highlight visual differences.</p>
-    <p>All images zoom and pan together. For different resolutions, relative sync keeps the same proportional region visible in each image.</p>
-    <p>Use it to choose the best-quality copy, inspect compression artifacts, scans, and exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.</p>
+    <p>Image Compare is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, in a stacked view, or in a grid layout, and generate luminance SSIM heatmaps to highlight structural differences between two images.</p>
+    <p>Use it to compare different versions of the same image, choose the best-quality copy from multiple sources, check compression artifacts, inspect scans or image exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.</p>
     <ul>
-      <li>Open images by drag and drop, file picker, command line, or file manager</li>
-      <li>Flip between images in stacked view or inspect several images in a grid</li>
-      <li>Synchronize all images, including proportionally across different resolutions</li>
-      <li>Generate and export perceptual heatmaps for two images</li>
-      <li>Switch between embedded color-profile rendering and raw rendering</li>
-      <li>Copy paths, open containing folders, reorder images, and close images</li>
-      <li>Load, zoom, and pan efficiently with Qt6 and libvips</li>
+      <li>Open images using drag-and-drop, the file picker, command-line arguments, or a file manager's Open With action</li>
+      <li>Compare two or more images side by side, in a stacked view, or in a grid layout</li>
+      <li>Synchronize zoom and pan across all images</li>
+      <li>Keep the same proportional region visible across different resolutions</li>
+      <li>Lock individual images to zoom and pan them independently</li>
+      <li>Flip between images in the same position using stacked view</li>
+      <li>Generate and export luminance SSIM heatmaps to highlight structural differences between two images</li>
+      <li>Switch between color-managed rendering using embedded profiles and raw rendering</li>
+      <li>Copy image paths, open containing folders, and close files from image context menus</li>
     </ul>
   </description>
   <screenshots>
@@ -34,6 +35,16 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.3.0" date="2026-08-12">
+      <description>
+        <ul>
+          <li>Replace the remaining libvips functionality with Qt-native APIs</li>
+          <li>Replace dE00 heatmaps with luminance SSIM heatmaps</li>
+          <li>Significantly reduce heatmap generation time and memory usage</li>
+          <li>Rework and simplify large parts of the codebase</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.2.1" date="2026-07-23">
       <description>
         <ul>
