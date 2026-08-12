@@ -91,6 +91,10 @@ cmake --build build
 ./build/imagecompare
 ```
 
+## Acknowledgements
+
+Luminance SSIM heatmaps use the vendored [rmgr::ssim](https://github.com/romigrou/ssim) library by Romain Bailly.
+
 ## Project Links
 
 - GitHub Releases: https://github.com/gimletlove/imagecompare/releases
