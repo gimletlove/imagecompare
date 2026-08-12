@@ -316,6 +316,7 @@ jobs:
 
   publish:
     name: Release Artifacts
+    if: github.ref == 'refs/heads/main'
     needs:
       - prepare
       - package-deb

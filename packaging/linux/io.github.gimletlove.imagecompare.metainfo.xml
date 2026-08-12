@@ -41,6 +41,7 @@
           <li>Replace the remaining libvips functionality with Qt-native APIs</li>
           <li>Replace dE00 heatmaps with luminance SSIM heatmaps</li>
           <li>Significantly reduce heatmap generation time and memory usage</li>
+          <li>Many general fixes and improvements</li>
           <li>Rework and simplify large parts of the codebase</li>
         </ul>
       </description>

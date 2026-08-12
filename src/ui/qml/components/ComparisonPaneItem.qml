@@ -26,6 +26,7 @@ Item {
     signal open_folder_requested(string path)
     signal move_requested(string entry_id, int direction)
     signal export_heatmap_requested(string entry_id)
+    signal focus_toggle_requested(string entry_id)
     signal synchronization_lock_toggle_requested(string entry_id)
 
     TapHandler {
@@ -40,6 +41,13 @@ Item {
 
     Menu {
         id: pane_context_menu
+
+        MenuItem {
+            text: "Focus Image (Enter)"
+            checkable: true
+            checked: root.focused
+            onTriggered: root.focus_toggle_requested(root.entry_id)
+        }
 
         MenuItem {
             text: "Lock synchronization (L)"

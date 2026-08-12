@@ -2,6 +2,7 @@
 
 #include <rmgr/ssim.h>
 
+#include <QColorSpace>
 #include <QMetaObject>
 #include <QPointer>
 #include <algorithm>
@@ -156,6 +157,7 @@ namespace {
         if (heatmap.isNull()) {
             throw std::runtime_error("could not allocate SSIM map");
         }
+        heatmap.setColorSpace(QColorSpace::SRgb);
         uchar* const map_storage = heatmap.bits();
 
         rmgr::ssim::GeneralParams params{};

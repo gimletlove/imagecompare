@@ -389,6 +389,7 @@ Item {
                 onOpen_folder_requested: path => is_source && root.controller && root.controller.open_containing_folder(path)
                 onMove_requested: (entry_id, direction) => root.move_entry(entry_id, direction)
                 onExport_heatmap_requested: entry_id => root.export_entry_heatmap(entry_id)
+                onFocus_toggle_requested: entry_id => root.activate_entry(entry_id) && root.toggle_focus_active_pane()
                 onSynchronization_lock_toggle_requested: entry_id => root.toggle_entry_lock(entry_id)
                 onView_changed: (pane, zoom_factor, image_center) => {
                     if (pane.synchronization_locked && !interaction_controller.syncing_view_state) {
