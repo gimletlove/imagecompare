@@ -141,19 +141,18 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE.txt")
 set(CPACK_GENERATOR "DEB;RPM")
 set(CPACK_DEBIAN_PACKAGE_SECTION "graphics")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "qt6-svg-plugins, qml6-module-qtqml-workerscript, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window"
+    "qml6-module-qtqml-workerscript, qml6-module-qtquick-controls, qml6-module-qtquick-layouts, qml6-module-qtquick-templates, qml6-module-qtquick-window"
 )
 set(CPACK_DEBIAN_PACKAGE_SUGGESTS
-    "qt6-image-formats-plugins, kimageformat6-plugins"
+    "qt6-svg-plugins, qt6-image-formats-plugins, kimageformat6-plugins"
 )
 set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_RPM_PACKAGE_LICENSE "GPL-3.0-or-later")
 set(CPACK_RPM_PACKAGE_GROUP "Applications/Graphics")
 set(CPACK_RPM_PACKAGE_AUTOREQ ON)
-set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtsvg")
 set(CPACK_RPM_PACKAGE_SUGGESTS
-    "qt6-qtimageformats, kf6-kimageformats"
+    "qt6-qtsvg, qt6-qtimageformats, kf6-kimageformats"
 )
 set(CPACK_RPM_FILE_NAME RPM-DEFAULT)
 include(CPack)
