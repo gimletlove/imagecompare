@@ -2,7 +2,7 @@
 
 [![GitHub Release](https://img.shields.io/github/v/release/gimletlove/imagecompare?label=release)](https://github.com/gimletlove/imagecompare/releases)
 [![Flathub](https://img.shields.io/flathub/v/io.github.gimletlove.imagecompare?label=Flathub)](https://flathub.org/apps/details/io.github.gimletlove.imagecompare)
-[![AUR](https://img.shields.io/aur/version/imagecompare-bin?label=AUR)](https://aur.archlinux.org/packages/imagecompare-bin)
+[![AUR](https://img.shields.io/aur/version/imagecompare?label=AUR)](https://aur.archlinux.org/packages/imagecompare)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
 
 **Image Compare** is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, in a stacked view, or in a grid layout, and generate luminance SSIM heatmaps to highlight structural differences between two images.
@@ -64,7 +64,7 @@ flatpak install flathub io.github.gimletlove.imagecompare
 ### Arch Linux AUR
 
 ```bash
-yay -S imagecompare-bin
+yay -S imagecompare
 ```
 
 ### Windows
