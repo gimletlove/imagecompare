@@ -43,6 +43,7 @@ add_executable(imagecompare
     src/core/ViewState.cpp
     src/app/WindowDropFilter.cpp
 )
+target_compile_options(imagecompare PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 target_compile_definitions(imagecompare PRIVATE IMAGECOMPARE_VERSION="${PROJECT_VERSION}")
 if(WIN32)
     configure_file(packaging/windows/imagecompare.rc.in imagecompare.rc @ONLY)
