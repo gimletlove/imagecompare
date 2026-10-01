@@ -3,24 +3,25 @@
 #include <rmgr/ssim.h>
 
 #include <QColorSpace>
+#include <QDebug>
 #include <QMetaObject>
-#include <QPointer>
+#include <QThread>
 #include <algorithm>
 #include <array>
+#include <atomic>
+#include <cerrno>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <exception>
-#include <new>
 #include <stdexcept>
 #include <system_error>
+#include <thread>
 #include <utility>
-
-#include "core/ImageSource.h"
+#include <vector>
 
 namespace {
-    constexpr int k_transparent_background = 127;
     constexpr int k_luma_red = 19595;
     constexpr int k_luma_green = 38470;
     constexpr int k_luma_blue = 7471;
@@ -38,8 +39,6 @@ namespace {
         HeatmapColor{1.0, 1.0, 0.0}, HeatmapColor{1.0, 0.0, 0.0}, HeatmapColor{1.0, 0.0, 1.0}, HeatmapColor{0.5, 0.5, 1.0},
         HeatmapColor{1.0, 0.5, 0.5}, HeatmapColor{1.0, 1.0, 0.5}, HeatmapColor{1.0, 1.0, 1.0}, HeatmapColor{1.0, 1.0, 1.0},
     };
-
-    [[nodiscard]] ComparisonResult fail(QString error) { return {.error = std::move(error), .heatmap = {}, .ssim = 0.0}; }
 
     [[nodiscard]] std::uint8_t heatmap_channel(double value) {
         return static_cast<std::uint8_t>(std::lround(std::sqrt(std::clamp(value, 0.0, 1.0)) * 255.0));
@@ -64,12 +63,35 @@ namespace {
         return lut;
     }
 
+    // Run rmgr::ssim tile jobs on short-lived threads
+    rmgr::ssim::int32_t dispatch_ssim_jobs(void*, rmgr::ssim::ThreadFct job, void* const args[], rmgr::ssim::uint32_t thread_count,
+                                           rmgr::ssim::uint32_t job_count) noexcept {
+        try {
+            std::atomic<rmgr::ssim::uint32_t> next_job{0};
+            std::vector<std::jthread> threads;
+            threads.reserve(thread_count);
+            for (rmgr::ssim::uint32_t thread_index = 0; thread_index < thread_count; ++thread_index) {
+                threads.emplace_back([&next_job, job, job_count, arg = args[thread_index]] {
+                    for (auto job_index = next_job++; job_index < job_count; job_index = next_job++) {
+                        job(arg, job_index);
+                    }
+                });
+            }
+            return 0;
+        } catch (...) {
+            return ECHILD;
+        }
+    }
+
     [[nodiscard]] QImage to_luminance(QImage image, const std::stop_token& token) {
         if (image.isNull()) {
             throw std::runtime_error("decoded image is empty");
         }
 
-        image.convertTo(QImage::Format_ARGB32);
+        // RGB32 already has the ARGB32 layout with opaque alpha
+        if (image.format() != QImage::Format_RGB32) {
+            image.convertTo(QImage::Format_ARGB32);
+        }
         if (image.isNull()) {
             throw std::runtime_error("could not normalize decoded image pixels");
         }
@@ -89,7 +111,7 @@ namespace {
                 const QRgb pixel = source[x];
                 const int luma =
                     (k_luma_red * qRed(pixel) + k_luma_green * qGreen(pixel) + k_luma_blue * qBlue(pixel) + k_luma_rounding) >> 16;
-                destination[x] = static_cast<uchar>((qAlpha(pixel) * luma + (255 - qAlpha(pixel)) * k_transparent_background + 127) / 255);
+                destination[x] = static_cast<uchar>((qAlpha(pixel) * luma + 127) / 255);
             }
         }
         return luminance;
@@ -111,44 +133,25 @@ namespace {
                 }
 
                 const double difference = std::sqrt(std::clamp(1.0 - static_cast<double>(pixel_ssim), 0.0, 1.0));
-                const auto palette_index = static_cast<std::size_t>(std::lround(difference * 255.0));
+                const auto palette_index = static_cast<std::size_t>(difference * 255.0 + 0.5);
                 const QRgb color = lut[palette_index];
                 std::memcpy(slot, &color, sizeof(color));
             }
         }
     }
 
-    [[nodiscard]] ComparisonResult compare_images(const ComparisonRequest& request, const std::stop_token& token) {
+    [[nodiscard]] ComparisonResult compare_images(const QImage& first_image, const QImage& second_image, const std::stop_token& token) {
         static_assert(sizeof(float) == sizeof(QRgb));
 
-        if (request.first_image_path.isEmpty() || request.second_image_path.isEmpty()) {
-            throw std::invalid_argument("comparison request has empty image paths");
+        if (first_image.isNull() || second_image.isNull()) {
+            throw std::invalid_argument("comparison request has empty images");
+        }
+        if (first_image.size() != second_image.size()) {
+            throw std::runtime_error("selected image dimensions differ");
         }
 
-        const bool apply_color_profile = request.color_mode == ColorMode::Faithful;
-        QImage first_luminance;
-        {
-            QImage decoded = ImageSource(request.first_image_path).decode(apply_color_profile);
-            if (token.stop_requested()) {
-                return {};
-            }
-            first_luminance = to_luminance(std::move(decoded), token);
-        }
-        if (token.stop_requested()) {
-            return {};
-        }
-
-        QImage second_luminance;
-        {
-            QImage decoded = ImageSource(request.second_image_path).decode(apply_color_profile);
-            if (token.stop_requested()) {
-                return {};
-            }
-            if (decoded.size() != first_luminance.size()) {
-                throw std::runtime_error("selected image dimensions differ");
-            }
-            second_luminance = to_luminance(std::move(decoded), token);
-        }
+        QImage first_luminance = to_luminance(first_image, token);
+        QImage second_luminance = to_luminance(second_image, token);
         if (token.stop_requested()) {
             return {};
         }
@@ -170,11 +173,13 @@ namespace {
         params.ssimStride = heatmap.bytesPerLine() / static_cast<qsizetype>(sizeof(float));
         params.use_default_allocator();
 
+        const rmgr::ssim::ThreadPool thread_pool{
+            .dispatch = dispatch_ssim_jobs,
+            .context = nullptr,
+            .threadCount = static_cast<rmgr::ssim::uint32_t>(std::max(1, QThread::idealThreadCount() / 2)),
+        };
         float score = 0.0F;
-        const int result = rmgr::ssim::compute_ssim(&score, params, nullptr);
-        if (token.stop_requested()) {
-            return {};
-        }
+        const int result = rmgr::ssim::compute_ssim(&score, params, &thread_pool);
         if (result != 0) {
             throw std::system_error(result, std::generic_category(), "SSIM failed");
         }
@@ -185,57 +190,37 @@ namespace {
         first_luminance = {};
         second_luminance = {};
         colorize(heatmap, token);
-        if (token.stop_requested()) {
-            return {};
-        }
-
-        return {.error = {}, .heatmap = std::move(heatmap), .ssim = static_cast<double>(score)};
+        return {.heatmap = std::move(heatmap), .ssim = static_cast<double>(score)};
     }
 }  // namespace
 
 ImageComparison::ImageComparison(QObject* parent) : QObject(parent) { m_thread_pool.setMaxThreadCount(1); }
 
-ImageComparison::~ImageComparison() {
-    cancel();
-    m_thread_pool.waitForDone();
-}
+ImageComparison::~ImageComparison() { cancel(); }
 
-void ImageComparison::start(ComparisonRequest request) {
+void ImageComparison::start(QImage first_image, QImage second_image) {
     cancel();
     m_cancellation_source = std::stop_source{};
-    const std::stop_token token = m_cancellation_source.get_token();
-    const QPointer<ImageComparison> comparison_guard(this);
-
-    m_thread_pool.start([comparison_guard, token, request = std::move(request)]() mutable {
-        ComparisonResult result;
-        try {
-            result = compare_images(request, token);
-        } catch (const std::bad_alloc&) {
-            result = fail(QStringLiteral("not enough memory to compare images"));
-        } catch (const std::exception& exception) {
-            result = fail(QString::fromUtf8(exception.what()));
-        } catch (...) {
-            result = fail(QStringLiteral("unexpected image comparison failure"));
-        }
-
-        if (token.stop_requested() || comparison_guard == nullptr) {
-            return;
-        }
-        QMetaObject::invokeMethod(
-            comparison_guard,
-            [comparison_guard, token, result = std::move(result)]() mutable {
-                if (comparison_guard == nullptr || token.stop_requested() || comparison_guard->m_cancellation_source.get_token() != token) {
-                    return;
-                }
-                comparison_guard->m_cancellation_source = std::stop_source{std::nostopstate};
-                Q_EMIT comparison_guard->finished(std::move(result));
-            },
-            Qt::QueuedConnection);
-    });
+    m_thread_pool.start(
+        [this, token = m_cancellation_source.get_token(), first_image = std::move(first_image), second_image = std::move(second_image)] {
+            ComparisonResult result;
+            try {
+                result = compare_images(first_image, second_image, token);
+            } catch (const std::exception& exception) {
+                qWarning().noquote() << "Heatmap job failed:" << exception.what();
+            }
+            QMetaObject::invokeMethod(
+                this,
+                [this, token, result = std::move(result)] {
+                    if (!token.stop_requested()) {
+                        Q_EMIT finished(result);
+                    }
+                },
+                Qt::QueuedConnection);
+        });
 }
 
 void ImageComparison::cancel() {
     m_cancellation_source.request_stop();
-    m_cancellation_source = std::stop_source{std::nostopstate};
     m_thread_pool.clear();
 }

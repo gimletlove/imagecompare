@@ -1,5 +1,8 @@
 #include "app/ApplicationController.h"
 
+#ifdef IMAGECOMPARE_FLATPAK
+#include <KUrlMimeData>
+#endif
 #include <QClipboard>
 #ifdef IMAGECOMPARE_FLATPAK
 #include <QDBusConnection>
@@ -11,12 +14,14 @@
 #include <QDebug>
 #include <QDesktopServices>
 #include <QDir>
+#include <QDropEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QGuiApplication>
 #include <QImageReader>
 #include <QImageWriter>
+#include <QMimeData>
 #include <QSaveFile>
 #include <QSet>
 #include <QStandardPaths>
@@ -48,11 +53,20 @@ namespace {
         return QStringLiteral("Images (%1)").arg(patterns.join(u' '));
     }
 
-    bool write_png(const QImage& image, const QString& output_path) {
+    QList<QUrl> dropped_urls(const QMimeData* mime_data) {
+#ifdef IMAGECOMPARE_FLATPAK
+        if (QList<QUrl> urls = KUrlMimeData::urlsFromMimeData(mime_data, KUrlMimeData::PreferLocalUrls); !urls.isEmpty()) {
+            return urls;
+        }
+#endif
+        return mime_data->urls();
+    }
+
+    void write_png(const QImage& image, const QString& output_path) {
         QSaveFile output(output_path);
         if (!output.open(QIODevice::WriteOnly)) {
             qWarning().noquote() << "Failed to open heatmap export" << output_path << ":" << output.errorString();
-            return false;
+            return;
         }
 
         {
@@ -60,19 +74,15 @@ namespace {
             writer.setCompression(1);
             if (!writer.write(image)) {
                 qWarning().noquote() << "Failed to export heatmap to" << output_path << ":" << writer.errorString();
-                return false;
+                return;
             }
         }
         if (!output.commit()) {
             qWarning().noquote() << "Failed to commit heatmap export to" << output_path << ":" << output.errorString();
-            return false;
         }
-        return true;
     }
 
 #ifdef IMAGECOMPARE_FLATPAK
-    bool running_in_flatpak() { return qEnvironmentVariableIsSet("FLATPAK_ID") || QFileInfo::exists(QStringLiteral("/.flatpak-info")); }
-
     QString document_portal_host_path(const QString& path) {
         if (path.isEmpty()) {
             return {};
@@ -96,9 +106,6 @@ namespace {
     }
 
     QString user_visible_path(const QString& path) {
-        if (!running_in_flatpak()) {
-            return path;
-        }
         const QString host_path = document_portal_host_path(path);
         return host_path.isEmpty() ? path : host_path;
     }
@@ -135,7 +142,7 @@ void ApplicationController::import_image_paths(const QStringList& paths) {
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
         const auto entry = m_workspace.entry_at(index);
         if (entry.is_source()) {
-            existing_source_paths.insert(ImageSource(entry.source_path).path());
+            existing_source_paths.insert(canonical_image_path(entry.source_path));
         }
     }
 
@@ -151,14 +158,14 @@ void ApplicationController::import_image_paths(const QStringList& paths) {
         }
 
         try {
-            const ImageSource source(normalized_path);
-            if (existing_source_paths.contains(source.path())) {
+            const QString canonical_path = canonical_image_path(normalized_path);
+            if (existing_source_paths.contains(canonical_path)) {
                 continue;
             }
-            if (m_workspace.add_source(normalized_path, source.pixel_size()).isNull()) {
+            if (m_workspace.add_source(normalized_path, probe_image_size(canonical_path)).isNull()) {
                 continue;
             }
-            existing_source_paths.insert(source.path());
+            existing_source_paths.insert(canonical_path);
             clear_existing_heatmap();
         } catch (const std::exception& ex) {
             qWarning().noquote() << "Failed to import image path" << normalized_path << ":" << ex.what();
@@ -186,32 +193,31 @@ bool ApplicationController::move_workspace_entry_by_id(const QString& entry_id, 
     return m_workspace.move_entry(QUuid(entry_id), direction);
 }
 
-bool ApplicationController::copy_path_to_clipboard(const QString& path) const {
+void ApplicationController::copy_path_to_clipboard(const QString& path) const {
     if (path.isEmpty() || QGuiApplication::clipboard() == nullptr) {
-        return false;
+        return;
     }
 #ifdef IMAGECOMPARE_FLATPAK
     QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(user_visible_path(path)));
 #else
     QGuiApplication::clipboard()->setText(QDir::toNativeSeparators(path));
 #endif
-    return true;
 }
 
-bool ApplicationController::open_containing_folder(const QString& path) const {
+void ApplicationController::open_containing_folder(const QString& path) const {
     const QFileInfo file_info(path);
     if (path.isEmpty() || file_info.absolutePath().isEmpty()) {
-        return false;
+        return;
     }
 #ifdef IMAGECOMPARE_FLATPAK
-    if (running_in_flatpak() && file_info.exists() && open_containing_folder_with_portal(path)) {
-        return true;
+    if (file_info.exists() && open_containing_folder_with_portal(path)) {
+        return;
     }
 #endif
-    return QDesktopServices::openUrl(QUrl::fromLocalFile(file_info.absolutePath()));
+    QDesktopServices::openUrl(QUrl::fromLocalFile(file_info.absolutePath()));
 }
 
-bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const {
+void ApplicationController::export_heatmap_by_id(const QString& entry_id) const {
     const QUuid parsed_entry_id(entry_id);
     QImage heatmap;
     for (int index = 0; index < m_workspace.entry_count(); ++index) {
@@ -222,7 +228,7 @@ bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const 
         }
     }
     if (heatmap.isNull()) {
-        return false;
+        return;
     }
 
     QString default_directory = QStandardPaths::writableLocation(QStandardPaths::PicturesLocation);
@@ -234,21 +240,21 @@ bool ApplicationController::export_heatmap_by_id(const QString& entry_id) const 
     QString output_path =
         QFileDialog::getSaveFileName(nullptr, QStringLiteral("Export Heatmap"), default_path, QStringLiteral("PNG Image (*.png)"));
     if (output_path.isEmpty()) {
-        return false;
+        return;
     }
     if (QFileInfo(output_path).suffix().isEmpty()) {
         output_path += QStringLiteral(".png");
     }
-    return write_png(heatmap, output_path);
+    write_png(heatmap, output_path);
 }
 
 void ApplicationController::toggle_color_mode() {
     clear_existing_heatmap();
-    m_workspace.set_color_mode(m_workspace.color_mode() == ColorMode::Faithful ? ColorMode::Raw : ColorMode::Faithful);
+    m_workspace.toggle_color_profile();
 }
 
 void ApplicationController::clear_existing_heatmap() {
-    static_cast<void>(m_workspace.remove_heatmap());
+    m_workspace.remove_heatmap();
     cancel_comparison();
 }
 
@@ -257,34 +263,35 @@ void ApplicationController::build_heatmap() {
         return;
     }
 
-    const auto first = m_workspace.entry_at(0);
-    const auto second = m_workspace.entry_at(1);
     m_heatmap_in_progress = true;
-    m_image_comparison.start({
-        .first_image_path = first.source_path,
-        .second_image_path = second.source_path,
-        .color_mode = m_workspace.color_mode(),
-    });
+    m_image_comparison.start(m_workspace.entry_at(0).source_image, m_workspace.entry_at(1).source_image);
     Q_EMIT heatmap_in_progress_changed();
 }
 
 WorkspaceModel* ApplicationController::workspace() noexcept { return &m_workspace; }
 
-void ApplicationController::on_comparison_finished(ComparisonResult result) {
-    if (!m_heatmap_in_progress) {
-        return;
+bool ApplicationController::eventFilter(QObject* watched, QEvent* event) {
+    if (event->type() == QEvent::DragEnter || event->type() == QEvent::Drop) {
+        auto* drop_event = static_cast<QDropEvent*>(event);
+        const QList<QUrl> urls = dropped_urls(drop_event->mimeData());
+        if (!urls.isEmpty()) {
+            if (event->type() == QEvent::Drop) {
+                import_image_paths(QUrl::toStringList(urls));
+            }
+            drop_event->acceptProposedAction();
+        }
     }
+    return QObject::eventFilter(watched, event);
+}
+
+void ApplicationController::on_comparison_finished(ComparisonResult result) {
     m_heatmap_in_progress = false;
     Q_EMIT heatmap_in_progress_changed();
 
-    if (!result.succeeded()) {
-        qWarning().noquote() << "Heatmap job failed:" << (result.error.isEmpty() ? QStringLiteral("unknown error") : result.error);
+    if (result.heatmap.isNull()) {
         return;
     }
-    const QString summary = QStringLiteral("SSIM %1").arg(result.ssim, 0, 'f', 6);
-    if (m_workspace.add_heatmap(std::move(result.heatmap), summary).isNull()) {
-        qWarning().noquote() << "Failed to add heatmap result to the workspace";
-    }
+    m_workspace.add_heatmap(std::move(result.heatmap), QStringLiteral("SSIM %1").arg(result.ssim, 0, 'f', 6));
 }
 
 void ApplicationController::cancel_comparison() {

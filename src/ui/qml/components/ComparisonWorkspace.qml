@@ -7,31 +7,33 @@ Item {
     focus: true
     property var controller
 
+    component ToolbarButton: ToolButton {
+        property string tip
+        focusPolicy: Qt.NoFocus
+        ToolTip.delay: 300
+        ToolTip.visible: hovered
+        ToolTip.text: tip
+    }
+
     Action {
         id: open_action
         shortcut: "O"
         text: "Open (o)"
-        onTriggered: {
-            if (root.controller) {
-                root.controller.open_images_with_native_dialog()
-            }
-        }
+        onTriggered: root.controller.open_images_with_native_dialog()
     }
 
     Action {
         id: heatmap_action
         shortcut: "B"
-        text: root.controller && root.controller.heatmap_in_progress ? "Building..." : "Heatmap (b)"
-        enabled: root.controller && root.controller.workspace
-            ? !root.controller.heatmap_in_progress && root.controller.workspace.can_build_heatmap
-            : false
+        text: root.controller.heatmap_in_progress ? "Building..." : "Heatmap (b)"
+        enabled: !root.controller.heatmap_in_progress && root.controller.workspace.can_build_heatmap
         onTriggered: root.controller.build_heatmap()
     }
 
     Action {
         id: color_mode_action
         shortcut: "R"
-        text: (root.controller && root.controller.workspace && root.controller.workspace.color_mode === 0 ? "Raw" : "Faithful") + " (r)"
+        text: (root.controller.workspace.apply_color_profile ? "Faithful" : "Raw") + " (r)"
         enabled: panes_grid.can_best_fit_action
         onTriggered: root.controller.toggle_color_mode()
     }
@@ -104,13 +106,13 @@ Item {
 
     Shortcut {
         sequence: "Right"
-        enabled: panes_grid.overlay_mode_enabled
+        enabled: panes_grid.overlay_mode_enabled && panes_grid.focused_entry_id.length === 0
         onActivated: panes_grid.cycle_overlay_pane(1)
     }
 
     Shortcut {
         sequence: "Left"
-        enabled: panes_grid.overlay_mode_enabled
+        enabled: panes_grid.overlay_mode_enabled && panes_grid.focused_entry_id.length === 0
         onActivated: panes_grid.cycle_overlay_pane(-1)
     }
 
@@ -119,65 +121,43 @@ Item {
         anchors.margins: 3
         spacing: 1
 
-        Item {
+        RowLayout {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
+            spacing: 4
 
-            RowLayout {
-                anchors.fill: parent
-                spacing: 4
+            ToolbarButton {
+                action: open_action
+                tip: "Import images into the workspace"
+            }
 
-                ToolButton {
-                    action: open_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Import images into the workspace"
-                    focusPolicy: Qt.NoFocus
-                }
+            Item {
+                Layout.fillWidth: true
+            }
 
-                Item {
-                    Layout.fillWidth: true
-                }
+            ToolbarButton {
+                action: heatmap_action
+                tip: "Build a heatmap of the level of difference from two images"
+            }
 
-                ToolButton {
-                    action: heatmap_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Build a heatmap of the level of difference from two images"
-                    focusPolicy: Qt.NoFocus
-                }
+            ToolbarButton {
+                action: color_mode_action
+                tip: "Faithful uses color profile metadata; Raw ignores color profile metadata"
+            }
 
-                ToolButton {
-                    action: color_mode_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Faithful uses color profile metadata; Raw ignores color profile metadata"
-                    focusPolicy: Qt.NoFocus
-                }
+            ToolbarButton {
+                action: zoom_fit_action
+                tip: "Toggle best fit and 100 percent zoom (F)"
+            }
 
-                ToolButton {
-                    action: zoom_fit_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Toggle best fit and 100 percent zoom (F)"
-                    focusPolicy: Qt.NoFocus
-                }
+            ToolbarButton {
+                action: overlay_action
+                tip: "Stack images and cycle with arrow keys"
+            }
 
-                ToolButton {
-                    action: overlay_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Stack images and cycle with arrow keys"
-                    focusPolicy: Qt.NoFocus
-                }
-
-                ToolButton {
-                    action: match_zoom_action
-                    ToolTip.delay: 300
-                    ToolTip.visible: hovered
-                    ToolTip.text: "Synchronize zoom and pan proportionally across different image resolutions"
-                    focusPolicy: Qt.NoFocus
-                }
+            ToolbarButton {
+                action: match_zoom_action
+                tip: "Synchronize zoom and pan proportionally across different image resolutions"
             }
         }
 
@@ -188,7 +168,7 @@ Item {
             PanesGrid {
                 id: panes_grid
                 anchors.fill: parent
-                model: root.controller ? root.controller.workspace : null
+                model: root.controller.workspace
                 controller: root.controller
             }
 

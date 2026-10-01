@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(image_compare VERSION 1.3.0 LANGUAGES CXX)
+project(image_compare VERSION 1.4.0 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
@@ -18,15 +18,7 @@ add_compile_definitions(QT_NO_KEYWORDS)
 
 option(IMAGECOMPARE_FLATPAK "Enable Flatpak-specific portal integration" OFF)
 
-set(IMAGECOMPARE_QT_COMPONENTS Core Gui Qml Quick QuickControls2 Widgets)
-if(IMAGECOMPARE_FLATPAK)
-    list(APPEND IMAGECOMPARE_QT_COMPONENTS DBus)
-endif()
-
-find_package(Qt6 6.4 REQUIRED COMPONENTS ${IMAGECOMPARE_QT_COMPONENTS})
-if(IMAGECOMPARE_FLATPAK)
-    find_package(KF6CoreAddons REQUIRED)
-endif()
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Widgets)
 
 add_subdirectory(third_party/ssim EXCLUDE_FROM_ALL)
 
@@ -40,8 +32,6 @@ add_executable(imagecompare
     src/core/ImageSource.cpp
     src/core/ImageComparison.cpp
     src/app/ApplicationController.cpp
-    src/core/ViewState.cpp
-    src/app/WindowDropFilter.cpp
 )
 target_compile_options(imagecompare PRIVATE $<$<PLATFORM_ID:Linux>:-fPIC>)
 target_compile_definitions(imagecompare PRIVATE IMAGECOMPARE_VERSION="${PROJECT_VERSION}")
@@ -56,22 +46,6 @@ qt_add_resources(imagecompare image_compare_app_resources
     FILES
         packaging/assets/imagecompare.svg
 )
-set(qml_component_files
-    src/ui/qml/components/ComparisonPaneItem.qml
-    src/ui/qml/components/ComparisonWorkspace.qml
-    src/ui/qml/components/PaneGridInteractionController.qml
-    src/ui/qml/components/PanesGrid.qml
-)
-foreach(qml_component_file IN LISTS qml_component_files)
-    get_filename_component(qml_component_name "${qml_component_file}" NAME)
-    set_source_files_properties("${qml_component_file}"
-        PROPERTIES QT_RESOURCE_ALIAS "components/${qml_component_name}"
-    )
-endforeach()
-set_source_files_properties(
-    src/ui/qml/Main.qml
-    PROPERTIES QT_RESOURCE_ALIAS Main.qml
-)
 qt_add_qml_module(imagecompare
     URI ImageCompare
     VERSION 1.0
@@ -81,7 +55,10 @@ qt_add_qml_module(imagecompare
         src/ui/ImageItem.cpp
     QML_FILES
         src/ui/qml/Main.qml
-        ${qml_component_files}
+        src/ui/qml/components/ComparisonPaneItem.qml
+        src/ui/qml/components/ComparisonWorkspace.qml
+        src/ui/qml/components/PaneGridInteractionController.qml
+        src/ui/qml/components/PanesGrid.qml
     DEPENDENCIES
         QtQml
         QtQuick
@@ -97,12 +74,13 @@ target_link_libraries(imagecompare
         Qt6::Gui
         Qt6::Qml
         Qt6::Quick
-        Qt6::QuickControls2
         Qt6::Widgets
         rmgr-ssim
 )
 
 if(IMAGECOMPARE_FLATPAK)
+    find_package(Qt6 REQUIRED COMPONENTS DBus)
+    find_package(KF6CoreAddons REQUIRED)
     target_compile_definitions(imagecompare PRIVATE IMAGECOMPARE_FLATPAK=1)
     target_link_libraries(imagecompare PRIVATE KF6::CoreAddons Qt6::DBus)
 endif()

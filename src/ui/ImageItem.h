@@ -10,18 +10,16 @@
 #include <QString>
 #include <QtGlobal>
 
-#include "core/ViewState.h"
-#include "core/WorkspaceModel.h"
-
 class ImageItem : public QQuickItem {
     Q_OBJECT
     QML_ELEMENT
     Q_PROPERTY(QString source_path READ source_path WRITE set_source_path)
     Q_PROPERTY(QImage input_image READ input_image WRITE set_input_image)
-    Q_PROPERTY(int color_mode READ color_mode WRITE set_color_mode)
+    Q_PROPERTY(bool apply_color_profile READ apply_color_profile WRITE set_apply_color_profile)
     Q_PROPERTY(double zoom_factor READ zoom_factor WRITE set_zoom_factor NOTIFY zoom_factor_changed)
     Q_PROPERTY(QPointF image_center READ image_center WRITE set_image_center NOTIFY image_center_changed)
     Q_PROPERTY(QSize image_pixel_size READ image_pixel_size NOTIFY image_pixel_size_changed)
+    Q_PROPERTY(QImage snapshot READ snapshot NOTIFY snapshot_changed)
 
    public:
     explicit ImageItem(QQuickItem* parent = nullptr);
@@ -30,14 +28,15 @@ class ImageItem : public QQuickItem {
     void set_source_path(QString path);
     [[nodiscard]] QImage input_image() const;
     void set_input_image(QImage image);
-    [[nodiscard]] int color_mode() const noexcept;
-    void set_color_mode(int mode);
+    [[nodiscard]] bool apply_color_profile() const noexcept { return m_apply_color_profile; }
+    void set_apply_color_profile(bool apply);
 
     [[nodiscard]] double zoom_factor() const noexcept;
     void set_zoom_factor(double value);
     [[nodiscard]] QPointF image_center() const noexcept;
     void set_image_center(const QPointF& center_point);
     [[nodiscard]] QSize image_pixel_size() const noexcept;
+    [[nodiscard]] QImage snapshot() const { return m_image; }
     Q_INVOKABLE void zoom_at(const QPointF& viewport_point, double zoom_multiplier);
     Q_INVOKABLE void pan_by(const QPointF& viewport_delta);
     Q_INVOKABLE void set_best_fit();
@@ -47,9 +46,11 @@ class ImageItem : public QQuickItem {
     void zoom_factor_changed();
     void image_center_changed();
     void image_pixel_size_changed();
+    void snapshot_changed();
     void activated();
 
    protected:
+    void componentComplete() override;
     QSGNode* updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*) override;
     void geometryChange(const QRectF& new_geometry, const QRectF& old_geometry) override;
     void itemChange(ItemChange change, const ItemChangeData& value) override;
@@ -62,15 +63,18 @@ class ImageItem : public QQuickItem {
     void clear_image();
     void load_effective_image();
     void request_decode(quint64 generation, QString source_path, bool apply_color_profile);
-    [[nodiscard]] QRectF visible_image_rect() const;
-    [[nodiscard]] QPointF viewport_point_in_pixels(const QPointF& point) const noexcept;
     void update_viewport_size();
+    void apply_zoom(double value);
+    void center_on(QPointF image_point);
+    [[nodiscard]] QPointF viewport_center() const;
+    [[nodiscard]] QPointF viewport_to_image_point(QPointF viewport_point) const;
 
     QString m_source_path;
     QImage m_input_image;
-    ColorMode m_color_mode = ColorMode::Faithful;
+    bool m_apply_color_profile = true;
     QSize m_pixel_size;
-    ViewState m_view_state;
+    double m_zoom_factor = 1.0;
+    QPointF m_image_center;
     QImage m_image;
     quint64 m_load_generation = 0;
     qreal m_device_pixel_ratio = 1.0;

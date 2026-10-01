@@ -11,7 +11,7 @@ Item {
     property alias source_path: pane_image.source_path
     property alias input_image: pane_image.input_image
     property bool is_source: false
-    property alias color_mode: pane_image.color_mode
+    property alias apply_color_profile: pane_image.apply_color_profile
     property bool synchronization_locked: false
     property bool local_best_fit_active: false
     property bool active: false
@@ -28,6 +28,7 @@ Item {
     signal export_heatmap_requested(string entry_id)
     signal focus_toggle_requested(string entry_id)
     signal synchronization_lock_toggle_requested(string entry_id)
+    signal snapshot_changed(string entry_id, var image)
 
     TapHandler {
         acceptedButtons: Qt.RightButton
@@ -207,6 +208,7 @@ Item {
         anchors.bottom: parent.bottom
         clip: true
         onActivated: root.activate_requested(root.entry_id)
+        onSnapshot_changed: root.snapshot_changed(root.entry_id, pane_image.snapshot)
         onZoom_factor_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
         onImage_center_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
     }

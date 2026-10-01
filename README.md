@@ -16,7 +16,7 @@ Use it to compare different versions of the same image, choose the best-quality 
 ## Features
 
 - Open images using drag-and-drop, the file picker, command-line arguments, or a file manager’s **Open With** action
-- Compare two or more images side by side, in a stacked view, or in a grid layout
+- Compare up to 12 images side by side, in a stacked view, or in a grid layout
 - Synchronize zoom and pan across all images
 - Use relative synchronization to keep the same proportional region visible across different resolutions
 - Lock individual images to zoom and pan them independently
@@ -99,4 +99,4 @@ Luminance SSIM heatmaps use the vendored [rmgr::ssim](https://github.com/romigro
 
 - GitHub Releases: https://github.com/gimletlove/imagecompare/releases
 - Flathub: https://flathub.org/apps/details/io.github.gimletlove.imagecompare
-- Arch Linux AUR: https://aur.archlinux.org/packages/imagecompare-bin
+- Arch Linux AUR: https://aur.archlinux.org/packages/imagecompare

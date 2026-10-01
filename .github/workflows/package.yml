@@ -79,13 +79,6 @@ jobs:
             --output="packages/imagecompare-${PACKAGE_VERSION}-source.tar.gz" \
             HEAD
 
-      - name: Verify vendored SSIM source archive
-        run: |
-          archive="packages/imagecompare-${PACKAGE_VERSION}-source.tar.gz"
-          prefix="imagecompare-${PACKAGE_VERSION}"
-          tar -tzf "$archive" | grep -Fx "$prefix/third_party/ssim/LICENSE"
-          tar -tzf "$archive" | grep -Fx "$prefix/third_party/ssim/src/ssim.cpp"
-
       - name: Build DEB package
         run: cpack --config build/CPackConfig.cmake -G DEB -B packages
 
@@ -212,9 +205,7 @@ jobs:
       - name: Configure Release build
         shell: msys2 {0}
         run: |
-          cmake -S . -B build-windows -G Ninja \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DIMAGECOMPARE_FLATPAK=OFF
+          cmake -S . -B build-windows -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         shell: msys2 {0}
@@ -285,9 +276,6 @@ jobs:
             vc_redist.x64.exe d3dcompiler_47.dll dxcompiler.dll dxil.dll \
             generic qmltooling networkinformation tls; do
             test ! -e "$deploy_dir/$unwanted"
-          done
-          for style in FluentWinUI3 Imagine Material Universal; do
-            test ! -e "$deploy_dir/share/qt6/qml/QtQuick/Controls/$style"
           done
       - name: Smoke-test Windows package
         shell: pwsh

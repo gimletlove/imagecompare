@@ -14,66 +14,29 @@ Item {
     property alias match_zoom_enabled: interaction_controller.match_zoom_enabled
     readonly property string zoom_readout: active_zoom_readout()
     readonly property int pane_count: pane_repeater.count
-    readonly property int overlay_source_pane_count: source_pane_count()
-    readonly property int unlocked_pane_count: unlocked_count()
+    readonly property int overlay_source_pane_count: source_panes().length
+    readonly property int unlocked_pane_count: interaction_controller.unlocked_panes().length
     readonly property bool can_best_fit_action: pane_count > 0
     readonly property bool can_overlay_action: overlay_source_pane_count > 1
     readonly property bool unlocked_pane_images_same_resolution: unlocked_panes_share_resolution()
     readonly property bool can_match_zoom_action: unlocked_pane_count > 1 && !unlocked_pane_images_same_resolution
     readonly property int layout_pane_count: effective_pane_count()
-    readonly property int column_count: layout_pane_count <= 1 ? 1 : (layout_pane_count === 2 ? 2 : (layout_pane_count === 3 ? 3 : 2))
+    readonly property int column_count: layout_pane_count <= 1 ? 1 : (layout_pane_count === 3 ? 3 : Math.ceil(Math.sqrt(layout_pane_count)))
     readonly property int row_count: layout_pane_count === 0 ? 1 : Math.ceil(layout_pane_count / column_count)
 
-    function source_pane_count(): int {
-        let source_count = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane && pane.is_source) {
-                source_count += 1;
-            }
-        }
-        return source_count;
-    }
-
-    function unlocked_count(): int {
-        let count = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane && !pane.synchronization_locked) {
-                count += 1;
-            }
-        }
-        return count;
+    function source_panes() {
+        return interaction_controller.panes().filter(pane => pane.is_source);
     }
 
     function unlocked_panes_share_resolution(): bool {
-        let baseline_width = 0.0;
-        let baseline_height = 0.0;
-        let comparable_panes = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (!pane || pane.synchronization_locked) {
-                continue;
-            }
-            const width = Number(pane.image_item.image_pixel_size.width);
-            const height = Number(pane.image_item.image_pixel_size.height);
-            if (width <= 0.0 || height <= 0.0) {
-                return false;
-            }
-            if (comparable_panes === 0) {
-                baseline_width = width;
-                baseline_height = height;
-            } else if (width !== baseline_width || height !== baseline_height) {
-                return false;
-            }
-            comparable_panes += 1;
-        }
-        return comparable_panes > 1;
+        const sizes = interaction_controller.unlocked_panes().map(pane => pane.image_item.image_pixel_size);
+        return sizes.length > 1 && sizes.every(size => size.width > 0 && size.height > 0
+            && size.width === sizes[0].width && size.height === sizes[0].height);
     }
 
     function active_zoom_readout(): string {
         const pane = pane_for_entry_id(active_entry_id);
-        const zoom = pane ? Number(pane.image_item.zoom_factor) : Number(interaction_controller.shared_zoom_factor);
+        const zoom = pane ? pane.image_item.zoom_factor : 1.0;
         return Math.round(zoom * 100.0) + "%";
     }
 
@@ -87,59 +50,17 @@ Item {
         return pane_count - overlay_source_pane_count + 1;
     }
 
-    function source_ordinal_for_repeater_index(repeater_index: int): int {
-        let source_ordinal = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.is_source) {
-                continue;
-            }
-            if (index === repeater_index) {
-                return source_ordinal;
-            }
-            source_ordinal += 1;
-        }
-        return -1;
-    }
-
     function source_ordinal_for_entry_id(entry_id: string): int {
-        let source_ordinal = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.is_source) {
-                continue;
-            }
-            if (pane.entry_id === entry_id) {
-                return source_ordinal;
-            }
-            source_ordinal += 1;
-        }
-        return -1;
+        return source_panes().findIndex(pane => pane.entry_id === entry_id);
     }
 
     function source_entry_id_for_ordinal(target_ordinal: int): string {
-        let source_ordinal = 0;
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (!pane || !pane.is_source) {
-                continue;
-            }
-            if (source_ordinal === target_ordinal) {
-                return pane.entry_id;
-            }
-            source_ordinal += 1;
-        }
-        return "";
+        const pane = source_panes()[target_ordinal];
+        return pane ? pane.entry_id : "";
     }
 
     function pane_for_entry_id(entry_id: string): var {
-        for (let index = 0; index < pane_repeater.count; ++index) {
-            const pane = pane_repeater.itemAt(index);
-            if (pane && pane.entry_id === entry_id) {
-                return pane;
-            }
-        }
-        return null;
+        return interaction_controller.panes().find(pane => pane.entry_id === entry_id) || null;
     }
 
     function validate_active_entry(): void {
@@ -154,107 +75,80 @@ Item {
         active_entry_id = next_pane ? next_pane.entry_id : "";
     }
 
-    function activate_entry(entry_id: string): bool {
+    function activate_entry(entry_id: string): void {
         const pane = pane_for_entry_id(entry_id);
         if (!pane) {
-            return false;
+            return;
         }
 
         active_entry_id = entry_id;
         if (overlay_mode_enabled && pane.is_source) {
-            const source_ordinal = source_ordinal_for_entry_id(entry_id);
-            if (source_ordinal >= 0) {
-                active_overlay_source_index = source_ordinal;
-            }
+            active_overlay_source_index = source_ordinal_for_entry_id(entry_id);
         }
-        return true;
     }
 
-    function is_pane_visible_in_layout(repeater_index: int, source_pane: bool, entry_id: string): bool {
+    function is_pane_visible_in_layout(source_pane: bool, entry_id: string): bool {
         if (focused_entry_id.length > 0) {
             return entry_id === focused_entry_id;
         }
         if (!overlay_mode_enabled || !source_pane || overlay_source_pane_count <= 1) {
             return true;
         }
-        return source_ordinal_for_repeater_index(repeater_index) === active_overlay_source_index;
+        return source_ordinal_for_entry_id(entry_id) === active_overlay_source_index;
     }
 
     function normalize_overlay_selection(): void {
-        const source_count = overlay_source_pane_count;
-        if (source_count <= 0) {
-            active_overlay_source_index = 0;
-            return;
-        }
-        const normalized = ((active_overlay_source_index % source_count) + source_count) % source_count;
-        if (normalized !== active_overlay_source_index) {
-            active_overlay_source_index = normalized;
-        }
+        const source_count = Math.max(1, overlay_source_pane_count);
+        active_overlay_source_index = ((active_overlay_source_index % source_count) + source_count) % source_count;
     }
 
-    function toggle_overlay_mode(): bool {
-        if (overlay_source_pane_count <= 1) {
-            overlay_mode_enabled = false;
-            return false;
-        }
+    function toggle_overlay_mode(): void {
         overlay_mode_enabled = !overlay_mode_enabled;
-        normalize_overlay_selection();
         if (overlay_mode_enabled) {
             const active_pane = pane_for_entry_id(active_entry_id);
             if (active_pane && active_pane.is_source) {
-                const source_ordinal = source_ordinal_for_entry_id(active_entry_id);
-                if (source_ordinal >= 0) {
-                    active_overlay_source_index = source_ordinal;
-                }
+                active_overlay_source_index = source_ordinal_for_entry_id(active_entry_id);
             } else {
                 active_entry_id = source_entry_id_for_ordinal(active_overlay_source_index);
             }
         }
-        return true;
     }
 
-    function cycle_overlay_pane(step: int): bool {
-        if (!overlay_mode_enabled || overlay_source_pane_count <= 1) {
-            return false;
-        }
-        const direction = Number(step) >= 0 ? 1 : -1;
-        active_overlay_source_index = active_overlay_source_index + direction;
+    function cycle_overlay_pane(step: int): void {
+        active_overlay_source_index += step;
         normalize_overlay_selection();
         active_entry_id = source_entry_id_for_ordinal(active_overlay_source_index);
-        return true;
     }
 
-    function sync_current_view_now(): bool {
-        return interaction_controller.sync_current_view_now();
+    function sync_current_view_now(): void {
+        interaction_controller.sync_current_view_now();
     }
 
-    function toggle_entry_lock(entry_id: string): bool {
+    function toggle_entry_lock(entry_id: string): void {
         const pane = pane_for_entry_id(entry_id);
         if (!pane) {
-            return false;
+            return;
         }
 
         if (!pane.synchronization_locked) {
             pane.local_best_fit_active = interaction_controller.shared_best_fit_active;
             pane.synchronization_locked = true;
-            return true;
+            return;
         }
 
-        const source_pane = interaction_controller.active_sync_pane(pane);
-        const rejoined = interaction_controller.rejoin_pane(pane, source_pane);
+        interaction_controller.rejoin_pane(pane, interaction_controller.active_sync_pane(pane));
         pane.synchronization_locked = false;
         pane.local_best_fit_active = false;
-        return rejoined;
     }
 
-    function toggle_lock_active_pane(): bool {
+    function toggle_lock_active_pane(): void {
         validate_active_entry();
-        return toggle_entry_lock(active_entry_id);
+        toggle_entry_lock(active_entry_id);
     }
 
-    function remove_entry(entry_id: string): bool {
-        if (!root.controller || !entry_id) {
-            return false;
+    function remove_entry(entry_id: string): void {
+        if (!entry_id) {
+            return;
         }
         const removed = root.controller.remove_workspace_entry_by_id(String(entry_id));
         if (removed && active_entry_id === entry_id) {
@@ -264,74 +158,67 @@ Item {
             focused_entry_id = "";
         }
         Qt.callLater(validate_active_entry);
-        return removed;
     }
 
-    function remove_active_entry(): bool {
+    function remove_active_entry(): void {
         validate_active_entry();
-        return remove_entry(active_entry_id);
+        remove_entry(active_entry_id);
     }
 
-    function move_entry(entry_id: string, direction: int): bool {
-        if (overlay_mode_enabled || !root.controller || !entry_id) {
-            return false;
+    function move_entry(entry_id: string, direction: int): void {
+        if (overlay_mode_enabled || !entry_id) {
+            return;
         }
-        const moved = root.controller.move_workspace_entry_by_id(String(entry_id), direction);
-        if (moved) {
+        if (root.controller.move_workspace_entry_by_id(String(entry_id), direction)) {
             active_entry_id = String(entry_id);
             Qt.callLater(validate_active_entry);
         }
-        return moved;
     }
 
-    function move_active_pane(direction: int): bool {
+    function move_active_pane(direction: int): void {
         validate_active_entry();
-        return move_entry(active_entry_id, direction);
+        move_entry(active_entry_id, direction);
     }
 
-    function copy_active_path(): bool {
+    function copy_active_path(): void {
         validate_active_entry();
         const pane = pane_for_entry_id(active_entry_id);
-        return pane && pane.is_source && root.controller ? root.controller.copy_path_to_clipboard(pane.source_path) : false;
+        if (pane && pane.is_source) {
+            root.controller.copy_path_to_clipboard(pane.source_path);
+        }
     }
 
-    function export_entry_heatmap(entry_id: string): bool {
-        return root.controller && entry_id ? root.controller.export_heatmap_by_id(String(entry_id)) : false;
-    }
-
-    function toggle_focus_active_pane(): bool {
+    function toggle_focus_active_pane(): void {
         validate_active_entry();
-        if (active_entry_id.length <= 0) {
-            return false;
-        }
         focused_entry_id = focused_entry_id === active_entry_id ? "" : active_entry_id;
-        return true;
     }
 
-    function clear_focus(): bool {
-        if (focused_entry_id.length <= 0) {
-            return false;
-        }
+    function clear_focus(): void {
         focused_entry_id = "";
         validate_active_entry();
-        return true;
     }
 
-    function toggle_zoom_fit(): bool {
+    function toggle_zoom_fit(): void {
         validate_active_entry();
-        return interaction_controller.toggle_zoom_fit(pane_for_entry_id(active_entry_id));
+        interaction_controller.toggle_zoom_fit(pane_for_entry_id(active_entry_id));
     }
 
     onPane_countChanged: {
+        if (pane_count > 0) {
+            interaction_controller.shared_best_fit_active = true;
+            Qt.callLater(interaction_controller.refresh_best_fit);
+        }
+        Qt.callLater(validate_active_entry);
+    }
+    onOverlay_source_pane_countChanged: {
         if (overlay_mode_enabled && overlay_source_pane_count <= 1) {
             overlay_mode_enabled = false;
         }
-        normalize_overlay_selection();
-        if (pane_count > 0) {
-            interaction_controller.shared_best_fit_active = true;
-            interaction_controller.schedule_best_fit_refresh();
+        const active_ordinal = source_ordinal_for_entry_id(active_entry_id);
+        if (active_ordinal >= 0) {
+            active_overlay_source_index = active_ordinal;
         }
-        Qt.callLater(validate_active_entry);
+        normalize_overlay_selection();
     }
     onCan_match_zoom_actionChanged: {
         if (can_match_zoom_action && match_zoom_enabled) {
@@ -342,9 +229,9 @@ Item {
         normalize_overlay_selection()
         Qt.callLater(validate_active_entry)
     }
-    onLayout_pane_countChanged: interaction_controller.schedule_best_fit_refresh()
-    onWidthChanged: interaction_controller.schedule_best_fit_refresh()
-    onHeightChanged: interaction_controller.schedule_best_fit_refresh()
+    onLayout_pane_countChanged: Qt.callLater(interaction_controller.refresh_best_fit)
+    onWidthChanged: Qt.callLater(interaction_controller.refresh_best_fit)
+    onHeightChanged: Qt.callLater(interaction_controller.refresh_best_fit)
 
     PaneGridInteractionController {
         id: interaction_controller
@@ -366,7 +253,6 @@ Item {
             model: root.model
 
             delegate: ComparisonPaneItem {
-                required property int index
                 required property var model
 
                 title: model.title
@@ -375,21 +261,25 @@ Item {
                 source_path: model.sourcePath
                 input_image: model.heatmapImage
                 is_source: model.isSource
-                color_mode: root.controller && root.controller.workspace ? root.controller.workspace.color_mode : 1
+                apply_color_profile: root.controller.workspace.apply_color_profile
                 active: root.active_entry_id === entry_id
                 focused: root.focused_entry_id === entry_id
                 can_move: !root.overlay_mode_enabled
-                visible: root.is_pane_visible_in_layout(index, is_source, entry_id)
+                visible: root.is_pane_visible_in_layout(is_source, entry_id)
                 width: (pane_grid.width - (pane_grid.columns - 1) * pane_grid.spacing) / pane_grid.columns
                 height: (pane_grid.height - (root.row_count - 1) * pane_grid.spacing) / root.row_count
                 clip: true
                 onRemove_requested: entry_id => root.remove_entry(entry_id)
+                onSnapshot_changed: (entry_id, image) => root.model.set_source_image(entry_id, image)
                 onActivate_requested: entry_id => root.activate_entry(entry_id)
-                onCopy_path_requested: path => is_source && root.controller && root.controller.copy_path_to_clipboard(path)
-                onOpen_folder_requested: path => is_source && root.controller && root.controller.open_containing_folder(path)
+                onCopy_path_requested: path => root.controller.copy_path_to_clipboard(path)
+                onOpen_folder_requested: path => root.controller.open_containing_folder(path)
                 onMove_requested: (entry_id, direction) => root.move_entry(entry_id, direction)
-                onExport_heatmap_requested: entry_id => root.export_entry_heatmap(entry_id)
-                onFocus_toggle_requested: entry_id => root.activate_entry(entry_id) && root.toggle_focus_active_pane()
+                onExport_heatmap_requested: entry_id => root.controller.export_heatmap_by_id(entry_id)
+                onFocus_toggle_requested: entry_id => {
+                    root.activate_entry(entry_id);
+                    root.toggle_focus_active_pane();
+                }
                 onSynchronization_lock_toggle_requested: entry_id => root.toggle_entry_lock(entry_id)
                 onView_changed: (pane, zoom_factor, image_center) => {
                     if (pane.synchronization_locked && !interaction_controller.syncing_view_state) {

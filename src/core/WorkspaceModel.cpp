@@ -53,36 +53,27 @@ QUuid WorkspaceModel::add_source(const QString& path, const QSize& pixel_size) {
     const QString resolution = QStringLiteral("%1x%2").arg(pixel_size.width()).arg(pixel_size.height());
     entry.subtitle =
         QStringLiteral("%1 • %2").arg(resolution, QLocale().formattedDataSize(file_info.size(), 2, QLocale::DataSizeTraditionalFormat));
-    entry.pixel_size = pixel_size;
 
     const int row = entry_count();
     beginInsertRows(QModelIndex(), row, row);
     m_entries.push_back(std::move(entry));
     endInsertRows();
-    Q_EMIT entry_count_changed();
+    Q_EMIT can_build_heatmap_changed();
     return m_entries.constLast().entry_id;
 }
 
-QUuid WorkspaceModel::add_heatmap(QImage heatmap, QString subtitle) {
-    if (entry_count() >= k_max_entries || heatmap.isNull()) {
-        return {};
-    }
-    if (std::any_of(m_entries.cbegin(), m_entries.cend(), [](const WorkspaceEntry& entry) { return entry.is_heatmap(); })) {
-        return {};
-    }
-
+void WorkspaceModel::add_heatmap(QImage heatmap, QString subtitle) {
     WorkspaceEntry entry;
     entry.entry_id = QUuid::createUuid();
     entry.heatmap = std::move(heatmap);
     entry.title = QStringLiteral("Heatmap");
-    entry.subtitle = subtitle.isEmpty() ? QStringLiteral("Generated heatmap") : std::move(subtitle);
+    entry.subtitle = std::move(subtitle);
 
     const int row = entry_count();
     beginInsertRows(QModelIndex(), row, row);
     m_entries.push_back(std::move(entry));
     endInsertRows();
-    Q_EMIT entry_count_changed();
-    return m_entries.constLast().entry_id;
+    Q_EMIT can_build_heatmap_changed();
 }
 
 WorkspaceEntry WorkspaceModel::entry_at(int index) const { return m_entries.at(index); }
@@ -97,7 +88,7 @@ bool WorkspaceModel::remove_entry(const QUuid& entry_id) {
     beginRemoveRows(QModelIndex(), index, index);
     m_entries.erase(entry);
     endRemoveRows();
-    Q_EMIT entry_count_changed();
+    Q_EMIT can_build_heatmap_changed();
     return true;
 }
 
@@ -128,15 +119,21 @@ bool WorkspaceModel::move_entry(const QUuid& entry_id, int direction) {
     return true;
 }
 
-void WorkspaceModel::set_color_mode(ColorMode mode) {
-    if (m_color_mode == mode) {
-        return;
-    }
-    m_color_mode = mode;
-    Q_EMIT color_mode_changed();
+void WorkspaceModel::toggle_color_profile() {
+    m_apply_color_profile = !m_apply_color_profile;
+    Q_EMIT apply_color_profile_changed();
 }
 
 bool WorkspaceModel::can_build_heatmap() const noexcept {
-    return m_entries.size() == 2 && m_entries[0].is_source() && m_entries[1].is_source() &&
-           m_entries[0].pixel_size == m_entries[1].pixel_size;
+    return m_entries.size() == 2 && m_entries[0].is_source() && m_entries[1].is_source() && !m_entries[0].source_image.isNull() &&
+           !m_entries[1].source_image.isNull() && m_entries[0].source_image.size() == m_entries[1].source_image.size();
+}
+
+void WorkspaceModel::set_source_image(const QString& entry_id, QImage image) {
+    const auto entry = std::ranges::find(m_entries, QUuid(entry_id), &WorkspaceEntry::entry_id);
+    if (entry == m_entries.end() || !entry->is_source() || entry->source_image.cacheKey() == image.cacheKey()) {
+        return;
+    }
+    entry->source_image = std::move(image);
+    Q_EMIT can_build_heatmap_changed();
 }

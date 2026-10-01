@@ -19,13 +19,14 @@ class ApplicationController : public QObject {
     Q_INVOKABLE void open_images_with_native_dialog();
     Q_INVOKABLE bool remove_workspace_entry_by_id(const QString& entry_id);
     Q_INVOKABLE bool move_workspace_entry_by_id(const QString& entry_id, int direction);
-    Q_INVOKABLE bool copy_path_to_clipboard(const QString& path) const;
-    Q_INVOKABLE bool open_containing_folder(const QString& path) const;
-    Q_INVOKABLE bool export_heatmap_by_id(const QString& entry_id) const;
+    Q_INVOKABLE void copy_path_to_clipboard(const QString& path) const;
+    Q_INVOKABLE void open_containing_folder(const QString& path) const;
+    Q_INVOKABLE void export_heatmap_by_id(const QString& entry_id) const;
     Q_INVOKABLE void toggle_color_mode();
     Q_INVOKABLE void build_heatmap();
 
     [[nodiscard]] WorkspaceModel* workspace() noexcept;
+    bool eventFilter(QObject* watched, QEvent* event) override;
     [[nodiscard]] bool heatmap_in_progress() const noexcept { return m_heatmap_in_progress; }
 
    Q_SIGNALS:
