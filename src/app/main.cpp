@@ -11,7 +11,7 @@ int main(int argc, char* argv[]) {
     qputenv("QML_DISK_CACHE", "aot");
     QImageReader::setAllocationLimit(2000);
 
-    // Qt may choose a 565 (16-bit) format on EGL, when buffer sizes a not explicitly set, causing banding.
+    // Qt may choose a 565 (16-bit) format on EGL, when buffer sizes are not explicitly set, causing banding.
     QSurfaceFormat surface_format = QSurfaceFormat::defaultFormat();
     surface_format.setRedBufferSize(8);
     surface_format.setGreenBufferSize(8);
