@@ -100,15 +100,15 @@ QtObject {
         syncing_view_state = false;
     }
 
-    function set_zoom100(source_pane): void {
+    function set_zoom(source_pane, zoom_value): void {
         if (source_pane.synchronization_locked) {
-            source_pane.image_item.zoom_factor = 1.0;
+            source_pane.image_item.zoom_factor = zoom_value;
             source_pane.local_best_fit_active = false;
             return;
         }
 
         if (match_zoom_enabled) {
-            source_pane.image_item.zoom_factor = 1.0;
+            source_pane.image_item.zoom_factor = zoom_value;
             update_shared_from_pane(source_pane, source_pane.image_item.zoom_factor, source_pane.image_item.image_center);
             return;
         }
@@ -116,7 +116,7 @@ QtObject {
         syncing_view_state = true;
         shared_best_fit_active = false;
         for (const pane of unlocked_panes()) {
-            pane.image_item.zoom_factor = 1.0;
+            pane.image_item.zoom_factor = zoom_value;
         }
         syncing_view_state = false;
 
@@ -149,7 +149,7 @@ QtObject {
         const current_zoom = Number(source_pane.image_item.zoom_factor);
         const best_fit_zoom = Number(source_pane.image_item.best_fit_zoom());
         if (best_fit_zoom > 0.0 && Math.abs(current_zoom - best_fit_zoom) <= Math.max(0.001, best_fit_zoom * 0.01)) {
-            set_zoom100(source_pane);
+            set_zoom(source_pane, 1.0);
         } else {
             set_best_fit(source_pane);
         }

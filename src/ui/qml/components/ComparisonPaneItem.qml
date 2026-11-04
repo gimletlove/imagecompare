@@ -17,6 +17,7 @@ Item {
     property bool active: false
     property bool focused: false
     property bool can_move: true
+    property var stack_entries: null
     property alias image_item: pane_image
 
     signal remove_requested(string entry_id)
@@ -155,7 +156,67 @@ Item {
                 ToolTip.text: "Synchronization locked"
             }
 
+            Repeater {
+                model: root.stack_entries
+
+                delegate: Rectangle {
+                    id: stack_entry
+                    required property string entryId
+                    required property string title
+                    required property bool isSource
+                    readonly property bool current: entryId === root.entry_id
+
+                    visible: isSource
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.preferredWidth: 1
+                    color: current ? palette.highlight : "transparent"
+                    radius: 2
+
+                    Label {
+                        anchors.fill: parent
+                        anchors.leftMargin: 4
+                        anchors.rightMargin: 4
+                        verticalAlignment: Text.AlignVCenter
+                        text: stack_entry.title
+                        color: stack_entry.current ? palette.highlightedText : palette.windowText
+                        elide: Text.ElideMiddle
+                    }
+
+                    HoverHandler {
+                        id: stack_entry_hover
+                        cursorShape: Qt.PointingHandCursor
+                    }
+
+                    TapHandler {
+                        onTapped: root.activate_requested(stack_entry.entryId)
+                    }
+
+                    ToolTip.delay: 300
+                    ToolTip.visible: stack_entry_hover.hovered
+                    ToolTip.text: stack_entry.title
+                }
+            }
+
+            // Reserves the width of a large image's details, so the filenames don't shift when flipping between images.
+            TextMetrics {
+                id: stack_details_metrics
+                font: stack_details.font
+                text: "00000x00000 • 000.00 MB"
+            }
+
             Label {
+                id: stack_details
+                visible: root.stack_entries !== null
+                text: root.subtitle
+                horizontalAlignment: Text.AlignRight
+                elide: Text.ElideLeft
+                Layout.preferredWidth: stack_details_metrics.advanceWidth
+                Layout.leftMargin: 12
+            }
+
+            Label {
+                visible: root.stack_entries === null
                 text: pane_header.full_header_tool_tip_text
                 elide: Text.ElideMiddle
                 HoverHandler {
@@ -169,6 +230,7 @@ Item {
 
             ToolButton {
                 text: "x"
+                Layout.leftMargin: root.stack_entries !== null ? 8 : 0
                 implicitWidth: 22
                 implicitHeight: 22
                 focusPolicy: Qt.NoFocus

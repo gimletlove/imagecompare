@@ -1,11 +1,24 @@
 #include <QApplication>
+#include <QCommandLineParser>
+#include <QDebug>
 #include <QIcon>
 #include <QImageReader>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QSurfaceFormat>
+#include <QVariantMap>
+#include <cmath>
 
 #include "app/ApplicationController.h"
+
+namespace {
+    const QString k_repository_url = QStringLiteral("https://github.com/gimletlove/imagecompare");
+#ifdef IMAGECOMPARE_FLATPAK
+    const QString k_about_text = k_repository_url + QStringLiteral("\nRunning in Flatpak");
+#else
+    const QString k_about_text = k_repository_url;
+#endif
+}  // namespace
 
 int main(int argc, char* argv[]) {
     qputenv("QML_DISK_CACHE", "aot");
@@ -24,12 +37,55 @@ int main(int argc, char* argv[]) {
     app.setDesktopFileName(QStringLiteral("io.github.gimletlove.imagecompare"));
     app.setWindowIcon(QIcon(QStringLiteral(":/imagecompare.svg")));
 
+    QCommandLineParser parser;
+    parser.setApplicationDescription(QStringLiteral("Image Compare\n") + k_about_text);
+    parser.addHelpOption();
+    parser.addVersionOption();
+    const QCommandLineOption stack_option(QStringLiteral("stack"), QStringLiteral("Start in stacked view."));
+    const QCommandLineOption zoom_option(QStringLiteral("zoom"), QStringLiteral("Starting zoom: a percentage such as 100, or fit."),
+                                         QStringLiteral("percent|fit"), QStringLiteral("fit"));
+    const QCommandLineOption raw_option(QStringLiteral("raw"), QStringLiteral("Start with raw rendering, ignoring color profiles."));
+    const QCommandLineOption sync_option(
+        QStringLiteral("sync"), QStringLiteral("How zoom and pan sync across different resolutions: relative or absolute."),
+        QStringLiteral("relative|absolute"), QStringLiteral("relative"));
+    parser.addOptions({stack_option, zoom_option, raw_option, sync_option});
+    parser.addPositionalArgument(QStringLiteral("images"), QStringLiteral("Images to open."), QStringLiteral("[images...]"));
+
+    // Only --version reads this text, the window title needs the bare version.
+    app.setApplicationVersion(QStringLiteral(IMAGECOMPARE_VERSION "\n") + k_about_text);
+    parser.process(app);
+    app.setApplicationVersion(QStringLiteral(IMAGECOMPARE_VERSION));
+
+    double zoom_percent = 0.0;
+    if (const QString zoom = parser.value(zoom_option); zoom != QStringLiteral("fit")) {
+        bool valid = false;
+        zoom_percent = zoom.toDouble(&valid);
+        if (!valid || !std::isfinite(zoom_percent) || zoom_percent <= 0.0) {
+            qCritical().noquote() << "Invalid --zoom value:" << zoom;
+            return 1;
+        }
+    }
+    const QString sync = parser.value(sync_option);
+    if (sync != QStringLiteral("relative") && sync != QStringLiteral("absolute")) {
+        qCritical().noquote() << "Invalid --sync value:" << sync;
+        return 1;
+    }
+
     ApplicationController controller;
-    controller.import_image_paths(app.arguments().mid(1));
+    controller.import_image_paths(parser.positionalArguments());
+    if (parser.isSet(raw_option)) {
+        controller.toggle_color_mode();
+    }
 
     QQmlApplicationEngine engine;
     engine.addImportPath(QStringLiteral("qrc:/qt/qml"));
     engine.rootContext()->setContextProperty("application_controller", &controller);
+    engine.rootContext()->setContextProperty("application_startup_options", QVariantMap{
+                                                                    {QStringLiteral("stack"), parser.isSet(stack_option)},
+                                                                    {QStringLiteral("zoom_percent"), zoom_percent},
+                                                                    {QStringLiteral("absolute_sync"), sync == QStringLiteral("absolute")},
+                                                                });
+    engine.rootContext()->setContextProperty("application_repository_url", k_repository_url);
     const QUrl mainUrl(QStringLiteral("qrc:/qt/qml/ImageCompare/src/ui/qml/Main.qml"));
     engine.load(mainUrl);
     if (engine.rootObjects().isEmpty()) {

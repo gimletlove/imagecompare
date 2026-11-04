@@ -41,6 +41,20 @@ Use it to compare different versions of the same image, choose the best-quality 
 | `Ctrl+W` | Close active image |
 | `Ctrl+Left` / `Ctrl+Right` | Move image left / right |
 
+## Command Line
+
+```bash
+imagecompare --stack --zoom 100 image1.jxl image2.jxl image3.jxl
+```
+
+| Option | Action |
+|---|---|
+| `--stack` | Start in stacked view |
+| `--zoom <percent\|fit>` | Set the starting zoom, for example `100` |
+| `--raw` | Start with raw rendering, ignoring color profiles |
+| `--sync <relative\|absolute>` | Sync zoom and pan proportionally across different resolutions (`relative`, the default) or at the same zoom level (`absolute`) |
+| `--help`, `--version` | Show help or version information |
+
 ## Install
 
 ### GitHub Releases

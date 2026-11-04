@@ -7,6 +7,7 @@ Item {
     id: root
     property var model
     property var controller
+    property var startup_options
     property bool overlay_mode_enabled: false
     property int active_overlay_source_index: 0
     property string active_entry_id: ""
@@ -203,6 +204,23 @@ Item {
         interaction_controller.toggle_zoom_fit(pane_for_entry_id(active_entry_id));
     }
 
+    function apply_startup_zoom(): void {
+        if (startup_options.zoom_percent <= 0 || pane_count === 0) {
+            return;
+        }
+        validate_active_entry();
+        interaction_controller.set_zoom(pane_for_entry_id(active_entry_id), startup_options.zoom_percent / 100.0);
+    }
+
+    // Runs after the images exist: stack mode switches itself off while there are fewer than two.
+    Component.onCompleted: {
+        match_zoom_enabled = !startup_options.absolute_sync;
+        if (startup_options.stack && source_panes().length > 1) {
+            toggle_overlay_mode();
+        }
+        Qt.callLater(apply_startup_zoom);
+    }
+
     onPane_countChanged: {
         if (pane_count > 0) {
             interaction_controller.shared_best_fit_active = true;
@@ -265,6 +283,8 @@ Item {
                 active: root.active_entry_id === entry_id
                 focused: root.focused_entry_id === entry_id
                 can_move: !root.overlay_mode_enabled
+                stack_entries: root.overlay_mode_enabled && is_source && root.focused_entry_id.length === 0
+                    && root.is_pane_visible_in_layout(is_source, entry_id) ? root.model : null
                 visible: root.is_pane_visible_in_layout(is_source, entry_id)
                 width: (pane_grid.width - (pane_grid.columns - 1) * pane_grid.spacing) / pane_grid.columns
                 height: (pane_grid.height - (root.row_count - 1) * pane_grid.spacing) / root.row_count

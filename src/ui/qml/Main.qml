@@ -17,6 +17,8 @@ ApplicationWindow {
     ComparisonWorkspace {
         anchors.fill: parent
         controller: application_controller
+        startup_options: application_startup_options
+        repository_url: application_repository_url
     }
 
     Rectangle {

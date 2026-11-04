@@ -6,6 +6,8 @@ Item {
     id: root
     focus: true
     property var controller
+    property var startup_options
+    property string repository_url
 
     component ToolbarButton: ToolButton {
         property string tip
@@ -170,14 +172,29 @@ Item {
                 anchors.fill: parent
                 model: root.controller.workspace
                 controller: root.controller
+                startup_options: root.startup_options
             }
 
             Pane {
                 anchors.centerIn: parent
                 visible: panes_grid.pane_count === 0
 
-                Label {
-                    text: "Drop images here or click Open"
+                Column {
+                    spacing: 4
+
+                    Label {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: "Drop images here or click Open"
+                    }
+
+                    Label {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        text: '<a href="' + root.repository_url + '">' + root.repository_url.replace("https://", "") + "</a>"
+                        onLinkActivated: link => Qt.openUrlExternally(link)
+                        HoverHandler {
+                            cursorShape: Qt.PointingHandCursor
+                        }
+                    }
                 }
             }
         }
