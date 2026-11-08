@@ -67,6 +67,12 @@ namespace {
 int main(int argc, char* argv[]) {
     qputenv("QML_DISK_CACHE", "aot");
     QImageReader::setAllocationLimit(2000);
+#ifdef Q_OS_WIN
+    // Qt's default on Windows is the native "Windows" style, which draws large filled toolbar buttons.
+    if (qEnvironmentVariableIsEmpty("QT_QUICK_CONTROLS_STYLE")) {
+        qputenv("QT_QUICK_CONTROLS_STYLE", "FluentWinUI3");
+    }
+#endif
 
     // Qt may choose a 565 (16-bit) format on EGL, when buffer sizes are not explicitly set, causing banding.
     QSurfaceFormat surface_format = QSurfaceFormat::defaultFormat();

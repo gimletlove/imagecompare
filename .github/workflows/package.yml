@@ -283,6 +283,7 @@ jobs:
           $env:QT_DEBUG_PLUGINS = '1'
           $env:QT_FORCE_STDERR_LOGGING = '1'
           $env:QML_IMPORT_TRACE = '1'
+          $env:QT_LOGGING_RULES = 'qt.quick.controls.style.debug=true'
           $process = Start-Process $executable -PassThru `
             -RedirectStandardOutput "$PWD\imagecompare.stdout.log" `
             -RedirectStandardError "$PWD\imagecompare.stderr.log"
@@ -293,6 +294,12 @@ jobs:
             throw "imagecompare.exe exited during startup with code $($process.ExitCode)"
           }
           Stop-Process -Id $process.Id
+          $style = Select-String -Path "$PWD\imagecompare.stderr.log" -Pattern '^\s*style=' | Select-Object -First 1
+          if (-not $style -or $style.Line -notmatch 'FluentWinUI3') {
+            Get-Content "$PWD\imagecompare.stderr.log" | Select-String 'qt.quick.controls.style|style='
+            throw "imagecompare.exe did not use the FluentWinUI3 style"
+          }
+          Write-Output "Qt Quick Controls $($style.Line.Trim())"
 
       - name: Upload Windows package
         uses: actions/upload-artifact@v7
