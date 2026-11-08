@@ -48,6 +48,10 @@ class ImageItem : public QQuickItem {
     void image_pixel_size_changed();
     void snapshot_changed();
     void activated();
+    // Wheel zoom or drag pan, as opposed to resizes, loads and programmatic changes.
+    void user_view_changed();
+    // Size or device pixel ratio changed, which changes the best fit zoom.
+    void viewport_changed();
 
    protected:
     void componentComplete() override;

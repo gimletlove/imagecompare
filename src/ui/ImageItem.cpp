@@ -140,6 +140,7 @@ void ImageItem::update_viewport_size() {
         Q_EMIT image_center_changed();
     }
     update();
+    Q_EMIT viewport_changed();
 }
 
 QPointF ImageItem::viewport_center() const { return QPointF(width(), height()) * m_device_pixel_ratio / 2.0; }
@@ -207,6 +208,9 @@ void ImageItem::zoom_at(const QPointF& viewport_point, double zoom_multiplier) {
     if (!qFuzzyCompare(previous_zoom, m_zoom_factor)) {
         Q_EMIT zoom_factor_changed();
     }
+    if (m_image_center != previous_center || !qFuzzyCompare(previous_zoom, m_zoom_factor)) {
+        Q_EMIT user_view_changed();
+    }
 }
 
 void ImageItem::pan_by(const QPointF& viewport_delta) {
@@ -217,6 +221,7 @@ void ImageItem::pan_by(const QPointF& viewport_delta) {
     }
     update();
     Q_EMIT image_center_changed();
+    Q_EMIT user_view_changed();
 }
 
 void ImageItem::set_best_fit() {
@@ -282,9 +287,13 @@ QSGNode* ImageItem::updatePaintNode(QSGNode* old_node, UpdatePaintNodeData*) {
 
 void ImageItem::wheelEvent(QWheelEvent* event) {
     Q_EMIT activated();
-    const double multiplier = event->angleDelta().y() > 0 ? 1.2 : (1.0 / 1.2);
-    zoom_at(event->position(), multiplier);
     event->accept();
+    // Sideways scrolling has no vertical delta. Touchpads send many small deltas, so zoom 1.2x per 120 units (one wheel notch).
+    const int delta = event->angleDelta().y();
+    if (delta == 0) {
+        return;
+    }
+    zoom_at(event->position(), std::pow(1.2, delta / 120.0));
 }
 
 void ImageItem::mousePressEvent(QMouseEvent* event) {

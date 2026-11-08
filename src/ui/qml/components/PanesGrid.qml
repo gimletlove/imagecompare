@@ -121,6 +121,21 @@ Item {
         active_entry_id = source_entry_id_for_ordinal(active_overlay_source_index);
     }
 
+    // Left/Right: switch the active image, or the shown image in stacked view.
+    function step_image(step: int): void {
+        if (overlay_mode_enabled) {
+            cycle_overlay_pane(step);
+            return;
+        }
+        validate_active_entry();
+        const panes = interaction_controller.panes();
+        const index = panes.findIndex(pane => pane.entry_id === active_entry_id);
+        if (index < 0) {
+            return;
+        }
+        activate_entry(panes[(index + step + panes.length) % panes.length].entry_id);
+    }
+
     function sync_current_view_now(): void {
         interaction_controller.sync_current_view_now();
     }
@@ -247,9 +262,6 @@ Item {
         normalize_overlay_selection()
         Qt.callLater(validate_active_entry)
     }
-    onLayout_pane_countChanged: Qt.callLater(interaction_controller.refresh_best_fit)
-    onWidthChanged: Qt.callLater(interaction_controller.refresh_best_fit)
-    onHeightChanged: Qt.callLater(interaction_controller.refresh_best_fit)
 
     PaneGridInteractionController {
         id: interaction_controller
@@ -301,6 +313,8 @@ Item {
                     root.toggle_focus_active_pane();
                 }
                 onSynchronization_lock_toggle_requested: entry_id => root.toggle_entry_lock(entry_id)
+                // Covers window resizes, layout changes and display scale changes.
+                onViewport_changed: interaction_controller.refresh_best_fit()
                 onView_changed: (pane, zoom_factor, image_center) => {
                     if (pane.synchronization_locked && !interaction_controller.syncing_view_state) {
                         pane.local_best_fit_active = false;

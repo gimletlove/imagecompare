@@ -1,29 +1,24 @@
-# Image Compare - Image Comparison & Visual Diff Tool for Linux and Windows
+# Image Compare
 
 [![GitHub Release](https://img.shields.io/github/v/release/gimletlove/imagecompare?label=release)](https://github.com/gimletlove/imagecompare/releases)
 [![Flathub](https://img.shields.io/flathub/v/io.github.gimletlove.imagecompare?label=Flathub)](https://flathub.org/apps/details/io.github.gimletlove.imagecompare)
 [![AUR](https://img.shields.io/aur/version/imagecompare?label=AUR)](https://aur.archlinux.org/packages/imagecompare)
 [![License: GPL-3.0](https://img.shields.io/github/license/gimletlove/imagecompare)](./LICENSE.txt)
 
-**Image Compare** is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, in a stacked view, or in a grid layout, and generate luminance SSIM heatmaps to highlight structural differences between two images.
+Compare two or more images side by side, or stack them and flip between them in the same spot. Zoom and pan stay in sync across all images, even at different resolutions. Build a heatmap to see where two images differ: check compression artifacts, pick the best copy of an image, or review edits and upscales.
 
-Use it to compare different versions of the same image, choose the best-quality copy from multiple sources, check compression artifacts, inspect scans or image exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.
+Runs on Linux and Windows.
 
-## Screenshot
-
-![Image Compare app showing side-by-side image comparison and heatmap differences](./image-compare-screenshot.png)
+![Two compressed copies of a photo side by side with a heatmap of their differences](./screenshots/heatmap.png)
 
 ## Features
 
-- Open images using drag-and-drop, the file picker, command-line arguments, or a file manager’s **Open With** action
-- Compare up to 12 images side by side, in a stacked view, or in a grid layout
-- Synchronize zoom and pan across all images
-- Use relative synchronization to keep the same proportional region visible across different resolutions
-- Lock individual images to zoom and pan them independently
-- Flip between images in the same position using stacked view
-- Generate and export luminance SSIM heatmaps to highlight structural differences between two images
-- Switch between color-managed rendering using embedded profiles and raw rendering
-- Copy image paths, open containing folders, and close files from image context menus
+- Up to 12 images side by side in a grid, or stacked in one view
+- Zoom and pan synced across all images; lock an image to move it on its own
+- Relative sync keeps the same part of the image in view across different resolutions
+- Luminance SSIM heatmaps of two images, which you can export
+- Color-managed rendering using embedded profiles, or raw rendering
+- Open images by drag and drop, the file picker, the command line or a file manager's Open With
 
 ## Keyboard Shortcuts
 
@@ -32,7 +27,7 @@ Use it to compare different versions of the same image, choose the best-quality 
 | `o` | Open images |
 | `f` | Toggle best fit / 100% zoom |
 | `v` | Toggle stacked view |
-| Arrow keys | Cycle images in stacked view |
+| `Left` / `Right` | Switch the active image |
 | `Enter` | Focus the active image |
 | `h` | Toggle relative sync for different resolutions |
 | `l` | Toggle synchronization lock for the active image |
@@ -50,54 +45,20 @@ imagecompare --stack --zoom 100 image1.jxl image2.jxl image3.jxl
 | Option | Action |
 |---|---|
 | `--stack` | Start in stacked view |
-| `--zoom <percent\|fit>` | Set the starting zoom, for example `100` |
+| `--zoom <percent\|fit>` | Starting zoom, for example `100` |
 | `--raw` | Start with raw rendering, ignoring color profiles |
-| `--sync <relative\|absolute>` | Sync zoom and pan proportionally across different resolutions (`relative`, the default) or at the same zoom level (`absolute`) |
-| `--help`, `--version` | Show help or version information |
+| `--sync <relative\|absolute>` | Sync zoom and pan proportionally across resolutions (default), or at the same zoom level |
+| `--help`, `--version` | Show help or version |
 
 ## Install
 
-### GitHub Releases
-
-Download release builds from the [GitHub Releases page](https://github.com/gimletlove/imagecompare/releases).
-
-Available release builds:
-
-- Linux DEB package for Debian and Ubuntu-based distributions
-- Linux RPM package for Fedora and RPM-based distributions
-- Linux portable zip
-- Windows x86_64 portable zip
-- Source tarball
-
-### Flathub
-
-```bash
-flatpak install flathub io.github.gimletlove.imagecompare
-```
-
-### Arch Linux AUR
-
-```bash
-yay -S imagecompare
-```
-
-### Windows
-
-Download `imagecompare-<version>-windows-x86_64.zip` from GitHub Releases, extract it, and run `imagecompare.exe`.
-
-The Windows build is distributed as a portable zip with its runtime dependencies bundled.
+- **Flathub:** `flatpak install flathub io.github.gimletlove.imagecompare`
+- **Arch Linux (AUR):** `yay -S imagecompare`
+- **[GitHub Releases](https://github.com/gimletlove/imagecompare/releases):** DEB, RPM and portable zip for Linux, and a portable zip for Windows (extract and run `imagecompare.exe`)
 
 ## Build from Source
 
-Local source builds are intended for Linux. Windows packages are produced by the GitHub Actions release workflow.
-
-Build requirements:
-
-- C++20 compiler
-- CMake 3.21+
-- Qt 6
-
-Build and run:
+Needs a C++20 compiler, CMake 3.21+ and Qt 6.4+. Install Qt's image format plugins and KImageFormats to open WebP, AVIF and JPEG XL.
 
 ```bash
 cmake -S . -B build
@@ -105,12 +66,8 @@ cmake --build build
 ./build/imagecompare
 ```
 
+Windows builds come from the GitHub Actions release workflow.
+
 ## Acknowledgements
 
-Luminance SSIM heatmaps use the vendored [rmgr::ssim](https://github.com/romigrou/ssim) library by Romain Bailly.
-
-## Project Links
-
-- GitHub Releases: https://github.com/gimletlove/imagecompare/releases
-- Flathub: https://flathub.org/apps/details/io.github.gimletlove.imagecompare
-- Arch Linux AUR: https://aur.archlinux.org/packages/imagecompare
+Heatmaps use the vendored [rmgr::ssim](https://github.com/romigrou/ssim) library by Romain Bailly.

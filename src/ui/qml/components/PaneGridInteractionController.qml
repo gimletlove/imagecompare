@@ -77,6 +77,11 @@ QtObject {
     }
 
     function sync_current_view_now(): void {
+        // Best fit is already in sync in both modes; copying a fitted view would turn it off.
+        if (shared_best_fit_active) {
+            refresh_best_fit();
+            return;
+        }
         const source_pane = active_sync_pane();
         if (source_pane) {
             update_shared_from_pane(source_pane, source_pane.image_item.zoom_factor, source_pane.image_item.image_center);

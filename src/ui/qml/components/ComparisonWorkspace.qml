@@ -108,14 +108,14 @@ Item {
 
     Shortcut {
         sequence: "Right"
-        enabled: panes_grid.overlay_mode_enabled && panes_grid.focused_entry_id.length === 0
-        onActivated: panes_grid.cycle_overlay_pane(1)
+        enabled: panes_grid.focused_entry_id.length === 0
+        onActivated: panes_grid.step_image(1)
     }
 
     Shortcut {
         sequence: "Left"
-        enabled: panes_grid.overlay_mode_enabled && panes_grid.focused_entry_id.length === 0
-        onActivated: panes_grid.cycle_overlay_pane(-1)
+        enabled: panes_grid.focused_entry_id.length === 0
+        onActivated: panes_grid.step_image(-1)
     }
 
     ColumnLayout {

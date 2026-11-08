@@ -4,7 +4,6 @@ import "components"
 
 ApplicationWindow {
     id: window
-    visible: true
     width: 1280
     height: 800
     title: "Image Compare " + Qt.application.version

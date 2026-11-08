@@ -23,6 +23,7 @@ Item {
     signal remove_requested(string entry_id)
     signal activate_requested(string entry_id)
     signal view_changed(var pane, real zoom_factor, point image_center)
+    signal viewport_changed()
     signal copy_path_requested(string path)
     signal open_folder_requested(string path)
     signal move_requested(string entry_id, int direction)
@@ -271,7 +272,7 @@ Item {
         clip: true
         onActivated: root.activate_requested(root.entry_id)
         onSnapshot_changed: root.snapshot_changed(root.entry_id, pane_image.snapshot)
-        onZoom_factor_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
-        onImage_center_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
+        onUser_view_changed: root.view_changed(root, pane_image.zoom_factor, pane_image.image_center)
+        onViewport_changed: root.viewport_changed()
     }
 }

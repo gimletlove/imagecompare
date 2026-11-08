@@ -5,9 +5,14 @@
 #include <QImageReader>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QQuickWindow>
+#include <QScreen>
+#include <QSettings>
 #include <QSurfaceFormat>
 #include <QVariantMap>
 #include <cmath>
+#include <memory>
+#include <utility>
 
 #include "app/ApplicationController.h"
 
@@ -18,6 +23,45 @@ namespace {
 #else
     const QString k_about_text = k_repository_url;
 #endif
+
+    // Stored as ~/.config/<app id>.conf. Without an organization, QSettings would add an "Unknown Organization" folder.
+    QSettings app_settings() { return QSettings(QCoreApplication::applicationName(), QString()); }
+
+    // Shows the window at its last windowed size and maximized state, and saves both on quit.
+    void show_with_saved_geometry(QQuickWindow* window) {
+        QSettings settings = app_settings();
+        if (const QSize saved = settings.value(QStringLiteral("window/size")).toSize(); !saved.isEmpty()) {
+            window->resize(saved.boundedTo(window->screen()->availableSize()));
+        }
+
+        // Platforms may report the maximized size before the maximized state, so keep the size before the last resize too.
+        struct WindowedSizes {
+            QSize current;
+            QSize previous;
+        };
+        auto sizes = std::make_shared<WindowedSizes>(window->size(), window->size());
+        const auto record_size = [window, sizes] {
+            if (window->visibility() == QWindow::Windowed && window->size() != sizes->current) {
+                sizes->previous = std::exchange(sizes->current, window->size());
+            }
+        };
+        QObject::connect(window, &QWindow::widthChanged, window, record_size);
+        QObject::connect(window, &QWindow::heightChanged, window, record_size);
+        QObject::connect(qApp, &QCoreApplication::aboutToQuit, window, [window, sizes] {
+            // Closing the window hides it before quit, so visibility() is Hidden here; windowStates() keeps the flag.
+            const bool maximized = window->windowStates().testFlag(Qt::WindowMaximized);
+            QSettings settings = app_settings();
+            settings.setValue(QStringLiteral("window/size"),
+                              maximized && sizes->current == window->size() ? sizes->previous : sizes->current);
+            settings.setValue(QStringLiteral("window/maximized"), maximized);
+        });
+
+        if (settings.value(QStringLiteral("window/maximized")).toBool()) {
+            window->showMaximized();
+        } else {
+            window->show();
+        }
+    }
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -92,6 +136,7 @@ int main(int argc, char* argv[]) {
         return -1;
     }
     engine.rootObjects().constFirst()->installEventFilter(&controller);
+    show_with_saved_geometry(qobject_cast<QQuickWindow*>(engine.rootObjects().constFirst()));
 
     return app.exec();
 }

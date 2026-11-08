@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
-project(image_compare VERSION 1.4.2 LANGUAGES CXX)
+project(image_compare VERSION 1.4.3 LANGUAGES CXX)
 
 include(GNUInstallDirs)
 

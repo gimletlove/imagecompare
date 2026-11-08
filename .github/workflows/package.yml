@@ -241,11 +241,10 @@ jobs:
             "$deploy_dir/imageformats/kimg_kra.dll" \
             "$deploy_dir/imageformats/kimg_ora.dll" \
             "$deploy_dir/imageformats/kimg_raw.dll"
-          for style in FluentWinUI3 Imagine Material Universal; do
+          for style in Imagine Material Universal; do
             rm -rf "$deploy_dir/share/qt6/qml/QtQuick/Controls/$style"
           done
           rm -f \
-            "$deploy_dir/Qt6QuickControls2FluentWinUI3StyleImpl.dll" \
             "$deploy_dir/Qt6QuickControls2Imagine.dll" \
             "$deploy_dir/Qt6QuickControls2ImagineStyleImpl.dll" \
             "$deploy_dir/Qt6QuickControls2Material.dll" \

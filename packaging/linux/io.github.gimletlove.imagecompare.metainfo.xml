@@ -3,31 +3,36 @@
   <id>io.github.gimletlove.imagecompare</id>
   <launchable type="desktop-id">io.github.gimletlove.imagecompare.desktop</launchable>
   <name>Image Compare</name>
-  <summary>Image comparison and visual diff tool</summary>
+  <summary>Compare images side by side</summary>
   <metadata_license>CC0-1.0</metadata_license>
   <project_license>GPL-3.0-or-later</project_license>
   <developer id="io.github.gimletlove">
     <name>gimletlove</name>
   </developer>
   <description>
-    <p>Image Compare is a desktop image comparison and visual diff tool for Linux and Windows. Compare two or more images side by side, in a stacked view, or in a grid layout, and generate luminance SSIM heatmaps to highlight structural differences between two images.</p>
-    <p>Use it to compare different versions of the same image, choose the best-quality copy from multiple sources, check compression artifacts, inspect scans or image exports, compare edited or upscaled versions, and catch subtle changes in color, sharpness, cropping, scaling, or encoding.</p>
-    <ul>
-      <li>Open images using drag-and-drop, the file picker, command-line arguments, or a file manager's Open With action</li>
-      <li>Compare up to 12 images side by side, in a stacked view, or in a grid layout</li>
-      <li>Synchronize zoom and pan across all images</li>
-      <li>Keep the same proportional region visible across different resolutions</li>
-      <li>Lock individual images to zoom and pan them independently</li>
-      <li>Flip between images in the same position using stacked view</li>
-      <li>Generate and export luminance SSIM heatmaps to highlight structural differences between two images</li>
-      <li>Switch between color-managed rendering using embedded profiles and raw rendering</li>
-      <li>Copy image paths, open containing folders, and close files from image context menus</li>
-    </ul>
+    <p>Compare two or more images side by side, or stack them and flip between them in the same spot. Zoom and pan stay in sync across all images, even at different resolutions.</p>
+    <p>Build a heatmap to see exactly where two images differ: check compression artifacts, pick the best copy of an image, or review edits and upscales.</p>
   </description>
+  <branding>
+    <color type="primary" scheme_preference="light">#ffd84d</color>
+    <color type="primary" scheme_preference="dark">#6b5a1e</color>
+  </branding>
   <screenshots>
     <screenshot type="default">
-      <caption>Comparing two images side by side with a heatmap</caption>
-      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/image-compare-screenshot.png</image>
+      <caption>Two compressed copies of a photo side by side with a heatmap of their differences</caption>
+      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/screenshots/heatmap.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Flipping between image formats in stacked view at 100% zoom</caption>
+      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/screenshots/stacked-view.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Comparing four image formats in a grid</caption>
+      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/screenshots/grid.png</image>
+    </screenshot>
+    <screenshot>
+      <caption>Zoom and pan stay matched across different resolutions</caption>
+      <image>https://raw.githubusercontent.com/gimletlove/imagecompare/main/screenshots/relative-sync.png</image>
     </screenshot>
   </screenshots>
   <url type="homepage">https://github.com/gimletlove/imagecompare</url>
@@ -35,6 +40,17 @@
   <url type="vcs-browser">https://github.com/gimletlove/imagecompare</url>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="1.4.3" date="2026-11-08">
+      <description>
+        <ul>
+          <li>Fix best fit being turned off at startup and after loading images, so images now refit when the window is resized</li>
+          <li>Remember the window size and maximized state</li>
+          <li>Switch the active image with arrow keys</li>
+          <li>Zoom smoothly with touchpads, and no longer zoom out when scrolling sideways</li>
+          <li>Use the Windows 11 style on Windows</li>
+        </ul>
+      </description>
+    </release>
     <release version="1.4.2" date="2026-11-04">
       <description>
         <ul>
